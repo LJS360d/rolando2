@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    container_name: rolando
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./database:/root/database
+    restart: unless-stopped

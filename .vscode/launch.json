@@ -1,0 +1,26 @@
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch in Debug",
+      "type": "go",
+      "request": "launch",
+      "program": "${workspaceFolder}/cmd",
+      "env": {},
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Launch Tests in Debug",
+      "type": "go",
+      "request": "launch",
+      "program": "${workspaceFolder}/test",
+      "env": {},
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
