@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"rolando/app/log"
-	"rolando/app/model"
-	"rolando/app/services"
-	"rolando/app/utils"
+	"rolando/cmd/log"
+	"rolando/cmd/model"
+	"rolando/cmd/services"
+	"rolando/cmd/utils"
 
 	discord "github.com/bwmarrin/discordgo"
 )

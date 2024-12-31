@@ -3,7 +3,7 @@ package repositories
 import (
 	stdlog "log"
 	"os"
-	"rolando/app/log"
+	"rolando/cmd/log"
 	"time"
 
 	"github.com/glebarez/sqlite"

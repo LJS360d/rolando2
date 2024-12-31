@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"rolando/app/handlers"
-	"rolando/app/log"
-	"rolando/app/repositories"
-	"rolando/app/services"
+	"rolando/cmd/handlers"
+	"rolando/cmd/log"
+	"rolando/cmd/repositories"
+	"rolando/cmd/services"
 
 	"github.com/bwmarrin/discordgo"
 )

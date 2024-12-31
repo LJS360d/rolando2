@@ -3,7 +3,7 @@ package model
 import (
 	"errors"
 	"math/rand"
-	"rolando/app/utils"
+	"rolando/cmd/utils"
 	"sync"
 )
 

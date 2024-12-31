@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"rolando/app/log"
-	"rolando/app/services"
+	"rolando/cmd/log"
+	"rolando/cmd/services"
 
 	"github.com/bwmarrin/discordgo"
 )

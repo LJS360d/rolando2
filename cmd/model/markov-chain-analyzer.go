@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
-	"rolando/app/utils"
+	"rolando/cmd/utils"
 )
 
 type ChainAnalytics struct {

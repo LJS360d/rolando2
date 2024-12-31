@@ -1,8 +1,8 @@
 package services
 
 import (
-	"rolando/app/log"
-	"rolando/app/repositories"
+	"rolando/cmd/log"
+	"rolando/cmd/repositories"
 	"strings"
 	"sync"
 

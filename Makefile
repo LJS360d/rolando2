@@ -10,7 +10,7 @@ endif
 
 VERSION         := 3.0.0
 BUILD_DIR       := bin
-MAIN_PACKAGE    := ./app
+MAIN_PACKAGE    := ./cmd
 BUILD						:= $(shell git rev-parse --short HEAD)
 ENV 						?= production
 

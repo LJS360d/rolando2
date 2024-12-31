@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"fmt"
-	"rolando/app/log"
-	"rolando/app/model"
-	"rolando/app/services"
-	"rolando/app/utils"
+	"rolando/cmd/log"
+	"rolando/cmd/model"
+	"rolando/cmd/services"
+	"rolando/cmd/utils"
 	"rolando/config"
 
 	"github.com/bwmarrin/discordgo"

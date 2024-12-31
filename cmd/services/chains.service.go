@@ -1,10 +1,10 @@
 package services
 
 import (
-	"rolando/app/log"
-	"rolando/app/model"
-	"rolando/app/repositories"
-	"rolando/app/utils"
+	"rolando/cmd/log"
+	"rolando/cmd/model"
+	"rolando/cmd/repositories"
+	"rolando/cmd/utils"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
