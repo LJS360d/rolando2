@@ -34,6 +34,7 @@ func main() {
 	fmt.Println("Version: ", config.Version)
 	fmt.Println("Build: ", config.Build)
 	fmt.Println("Env: ", config.Env)
+	log.Log.Infoln("Creating discord session...")
 	ds, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
 		log.Log.Fatalf("error creating Discord session,", err)
@@ -46,7 +47,8 @@ func main() {
 	if err != nil {
 		log.Log.Fatalln("error opening connection,", err)
 	}
-
+	log.Log.Infoln("Discord session created")
+	log.Log.Infoln("Updating presence...")
 	err = ds.UpdateStatusComplex(discordgo.UpdateStatusData{
 		Activities: []*discordgo.Activity{
 			{
@@ -61,6 +63,8 @@ func main() {
 	if err != nil {
 		log.Log.Fatalf("error setting bot presence: %v", err)
 	}
+	log.Log.Infoln("Presence updated")
+	log.Log.Infoln("Initializing services...")
 	// DI
 	messagesRepo, err := repositories.NewMessagesRepository(DB_PATH)
 	if err != nil {
@@ -76,6 +80,7 @@ func main() {
 	messagesHandler := handlers.NewMessageHandler(ds, chainsService)
 	commandsHandler := handlers.NewSlashCommandsHandler(ds, chainsService)
 	buttonsHandler := handlers.NewButtonsHandler(ds, dataFetchService, chainsService)
+	log.Log.Infoln("All services initialized")
 	// Register
 	chainsService.LoadChains()
 	ds.AddHandler(commandsHandler.OnSlashCommandInteraction)

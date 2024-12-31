@@ -12,9 +12,10 @@ import (
 )
 
 type Message struct {
-	ID      uint   `gorm:"primaryKey"`
-	GuildID string `gorm:"index"`
-	Content string `gorm:"type:text"`
+	ID        uint      `gorm:"primaryKey"`
+	GuildID   string    `gorm:"index"`
+	Content   string    `gorm:"type:text"`
+	CreatedAt time.Time `gorm:"index"`
 }
 
 type MessagesRepository struct {
@@ -37,6 +38,17 @@ func NewMessagesRepository(dbPath string) (*MessagesRepository, error) {
 		return nil, err
 	}
 
+	// Set SQLite PRAGMA settings for performance
+	if err := db.Exec("PRAGMA synchronous = NORMAL;").Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
+		return nil, err
+	}
+	if err := db.Exec("PRAGMA cache_size = 10000;").Error; err != nil {
+		return nil, err
+	}
+
 	// Migrate the schema (creates the tables if they don't exist)
 	if err := db.AutoMigrate(&Message{}); err != nil {
 		return nil, err
@@ -44,13 +56,11 @@ func NewMessagesRepository(dbPath string) (*MessagesRepository, error) {
 
 	// Set up database session optimizations
 	db = db.Session(&gorm.Session{
-		// Enable WAL mode for better concurrency (especially in write-heavy workloads)
-		// SQLite WAL mode is more performant in multi-threaded scenarios
 		NowFunc: time.Now, // Set the `Now` function to get the correct time on queries
 	})
 
 	// Ensure indexes are created for performance
-	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_guild_id ON messages(guild_id);").Error; err != nil {
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_guild_id_timestamp ON messages(guild_id, created_at);").Error; err != nil {
 		return nil, err
 	}
 
@@ -72,6 +82,7 @@ func (repo *MessagesRepository) AppendMessage(guildID, content string) error {
 	return nil
 }
 
+// AddMessagesToGuild inserts multiple messages at once using batch inserts
 func (repo *MessagesRepository) AddMessagesToGuild(guildID string, messages []string) error {
 	// Prepare a slice of Message objects
 	var messageRecords []Message

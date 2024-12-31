@@ -84,14 +84,13 @@ func (d *DataFetchService) fetchChannelMessages(channel *discordgo.Channel) ([]s
 		if len(batch) == 0 {
 			break
 		}
-
-		for _, msg := range batch {
-			messages = append(messages, msg.Content)
-			// Update chain state (assumes ChainService has an UpdateChainState method)
-			go d.ChainService.UpdateChainState(msg.GuildID, []string{msg.Content})
-
+		batchMessages := make([]string, len(batch))
+		for i, msg := range batch {
+			batchMessages[i] = msg.Content
 		}
-		go d.messagesRepo.AddMessagesToGuild(channel.GuildID, messages)
+		go d.ChainService.UpdateChainState(channel.GuildID, batchMessages)
+		go d.messagesRepo.AddMessagesToGuild(channel.GuildID, batchMessages)
+		messages = append(messages, batchMessages...)
 		lastMessageID = batch[len(batch)-1].ID
 	}
 

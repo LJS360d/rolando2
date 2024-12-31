@@ -34,5 +34,6 @@ bin/
 
 # data
 *.db
+*.db-*
 *.db-journal
 *.sqlite
