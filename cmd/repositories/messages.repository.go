@@ -27,9 +27,9 @@ func NewMessagesRepository(dbPath string) (*MessagesRepository, error) {
 		Logger: logger.New(
 			stdlog.New(os.Stdout, "\r\n", stdlog.Flags()),
 			logger.Config{
-				SlowThreshold: time.Second,   // Set threshold to 1 second to suppress normal slow queries
-				LogLevel:      logger.Silent, // Show Info level logs (optional)
-				Colorful:      true,          // Disable colored output
+				SlowThreshold: time.Second,  // Set threshold to 1 second to suppress normal slow queries
+				LogLevel:      logger.Error, // Show Info level logs (optional)
+				Colorful:      true,         // Disable colored output
 			},
 		),
 	})
@@ -112,6 +112,16 @@ func (repo *MessagesRepository) DeleteAllGuildMessages(guildID string) error {
 // DeleteGuildMessage removes a message for a specific guild
 func (repo *MessagesRepository) DeleteGuildMessage(guildID, content string) error {
 	if err := repo.DB.Where("guild_id = ? AND content = ?", guildID, content).Delete(&Message{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteGuildMessagesContaining removes all messages for a specific guild
+// that contain the given content (substring match).
+func (repo *MessagesRepository) DeleteGuildMessagesContaining(guildID, content string) error {
+	// Using LIKE to match any message that contains the content
+	if err := repo.DB.Where("guild_id = ? AND content LIKE ?", guildID, "%"+content+"%").Delete(&Message{}).Error; err != nil {
 		return err
 	}
 	return nil

@@ -209,6 +209,9 @@ If you wish to exclude specific channels, revoke my typing permissions in those 
 
 // implementation of /gif command
 func (h *SlashCommandsHandler) gifCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
 		return
@@ -227,6 +230,9 @@ func (h *SlashCommandsHandler) gifCommand(s *discordgo.Session, i *discordgo.Int
 
 // implementation of /image command
 func (h *SlashCommandsHandler) imageCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
 		return
@@ -245,6 +251,9 @@ func (h *SlashCommandsHandler) imageCommand(s *discordgo.Session, i *discordgo.I
 
 // implementation of /video command
 func (h *SlashCommandsHandler) videoCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
 		return

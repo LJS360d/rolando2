@@ -52,7 +52,7 @@ func (h *ButtonsHandler) OnButtonInteraction(s *discordgo.Session, i *discordgo.
 // Handle 'confirm-train' button interaction
 func (h *ButtonsHandler) onConfirmTrain(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Defer the update
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	})
 

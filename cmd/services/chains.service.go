@@ -54,7 +54,7 @@ func (cs *ChainsService) GetChainDocument(id string) (*repositories.Chain, error
 func (cs *ChainsService) CreateChain(id, name string) (*model.MarkovChain, error) {
 	log.Log.Infof("Creating chain: %s", name)
 	cs.mu.Lock()
-	chain := model.NewMarkovChain(id, 10, true, []string{})
+	chain := model.NewMarkovChain(id, 10, true, []string{}, cs.messagesRepo)
 	cs.chainsMap[id] = chain
 	_, err := cs.chainsRepo.CreateChain(id, name)
 	cs.mu.Unlock()
@@ -116,6 +116,7 @@ func (cs *ChainsService) LoadChains() error {
 			chain.ReplyRate,
 			chain.Pings,
 			messages,
+			cs.messagesRepo,
 		)
 	}
 	log.Log.Infof("Loaded %d chains!", len(cs.chainsMap))

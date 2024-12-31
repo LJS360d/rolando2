@@ -16,19 +16,19 @@ func ExtractUrlInfo(inputUrl string) (domain string, extension string) {
 }
 
 func IsGif(url string) bool {
-	supportedExtensions := []string{".gif"}
+	supportedExtensions := []string{"gif"}
 	supportedDomains := []string{"tenor.com", "giphy.com"}
 	return isSupportedUrl(strings.TrimSpace(url), supportedExtensions, supportedDomains)
 }
 
 func IsImage(url string) bool {
-	supportedExtensions := []string{".png", ".jpg", ".jpeg", ".webp"}
+	supportedExtensions := []string{"png", "jpg", "jpeg", "webp"}
 	supportedDomains := []string{"imgur.com"}
 	return isSupportedUrl(strings.TrimSpace(url), supportedExtensions, supportedDomains)
 }
 
 func IsVideo(url string) bool {
-	supportedExtensions := []string{".mp4", ".mov"}
+	supportedExtensions := []string{"mp4", "mov"}
 	supportedDomains := []string{"youtube.com", "youtu.be"}
 	return isSupportedUrl(strings.TrimSpace(url), supportedExtensions, supportedDomains)
 }

@@ -17,7 +17,7 @@ The concept is inspired by [`Fioriktos`](https://github.com/FiorixF1/fioriktos-b
 ## How to Startup Your Own Rolando
 
 - Prerequisites:
-  - Go 1.23.4+
+  - Go 1.23.0+
 - Reccomended:
   - Make 4.4.1+
 

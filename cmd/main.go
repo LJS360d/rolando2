@@ -28,12 +28,12 @@ const (
 )
 
 func main() {
-	fmt.Println("Version: ", Version)
-	fmt.Println("Build: ", Build)
-	fmt.Println("Env: ", Env)
 	config.Version = Version
 	config.Build = Build
 	config.Env = Env
+	fmt.Println("Version: ", config.Version)
+	fmt.Println("Build: ", config.Build)
+	fmt.Println("Env: ", config.Env)
 	ds, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
 		log.Log.Fatalf("error creating Discord session,", err)

@@ -58,7 +58,7 @@ func (mca *MarkovChainAnalyzer) GetAnalytics() ChainAnalytics {
 		ReplyRate:       fmt.Sprintf("%d", mca.chain.ReplyRate),
 		Words:           fmt.Sprintf("%d", len(mca.chain.State)),
 		Messages:        fmt.Sprintf("%d", mca.chain.MessageCounter),
-		Size:            utils.FormatBytes(uint64(utils.MeasureSize(mca.chain))),
+		Size:            utils.FormatBytes(uint64(utils.MeasureSize(mca.chain.State))),
 	}
 }
 
@@ -71,6 +71,6 @@ func (mca *MarkovChainAnalyzer) GetRawAnalytics() NumericChainAnalytics {
 		ReplyRate:       mca.chain.ReplyRate,
 		Words:           len(mca.chain.State),
 		Messages:        mca.chain.MessageCounter,
-		Size:            int(utils.MeasureSize(mca.chain)),
+		Size:            int(utils.MeasureSize(mca.chain.State)),
 	}
 }

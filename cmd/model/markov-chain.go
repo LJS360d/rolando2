@@ -2,6 +2,7 @@ package model
 
 import (
 	"math/rand"
+	"rolando/cmd/repositories"
 	"strings"
 	"sync"
 )
@@ -16,13 +17,13 @@ type MarkovChain struct {
 	mu             sync.RWMutex
 }
 
-func NewMarkovChain(id string, replyRate int, pings bool, messages []string) *MarkovChain {
+func NewMarkovChain(id string, replyRate int, pings bool, messages []string, messagesRepo repositories.MessagesRepository) *MarkovChain {
 	mc := &MarkovChain{
 		ID:           id,
 		ReplyRate:    replyRate,
 		Pings:        pings,
 		State:        make(map[string]map[string]int),
-		MediaStorage: NewMediaStorage(id, nil, nil, nil),
+		MediaStorage: NewMediaStorage(id, nil, nil, nil, messagesRepo),
 	}
 	mc.ProvideData(messages)
 	return mc
