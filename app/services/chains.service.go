@@ -4,28 +4,32 @@ import (
 	"rolando/app/log"
 	"rolando/app/model"
 	"rolando/app/repositories"
+	"rolando/app/utils"
 	"sync"
-	"unsafe"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 type ChainsService struct {
 	mu           sync.RWMutex
+	session      *discordgo.Session
 	chainsMap    map[string]*model.MarkovChain
 	chainsRepo   repositories.ChainsRepository
 	messagesRepo repositories.MessagesRepository
 }
 
 // NewChainsService initializes a new ChainsService.
-func NewChainsService(chainsRepo repositories.ChainsRepository, messagesRepo repositories.MessagesRepository) *ChainsService {
+func NewChainsService(ds *discordgo.Session, chainsRepo repositories.ChainsRepository, messagesRepo repositories.MessagesRepository) *ChainsService {
 	return &ChainsService{
 		chainsMap:    make(map[string]*model.MarkovChain),
 		chainsRepo:   chainsRepo,
 		messagesRepo: messagesRepo,
+		session:      ds,
 	}
 }
 
 // GetChain retrieves a Markov chain by ID, creating it if not already loaded.
-func (cs *ChainsService) GetChain(id, name string) (*model.MarkovChain, error) {
+func (cs *ChainsService) GetChain(id string) (*model.MarkovChain, error) {
 	cs.mu.RLock()
 	chain, exists := cs.chainsMap[id]
 	cs.mu.RUnlock()
@@ -33,9 +37,12 @@ func (cs *ChainsService) GetChain(id, name string) (*model.MarkovChain, error) {
 	if exists {
 		return chain, nil
 	}
-
+	guild, err := cs.session.State.Guild(id)
+	if err != nil {
+		return nil, err
+	}
 	// Create a new chain if it doesn't exist
-	return cs.CreateChain(id, name)
+	return cs.CreateChain(id, guild.Name)
 }
 
 // GetChainDocument retrieves the chain document from the repository.
@@ -59,7 +66,7 @@ func (cs *ChainsService) CreateChain(id, name string) (*model.MarkovChain, error
 
 // UpdateChainState updates the Markov chain's state with new text data.
 func (cs *ChainsService) UpdateChainState(id string, text []string) (*model.MarkovChain, error) {
-	chain, err := cs.GetChain(id, "")
+	chain, err := cs.GetChain(id)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +124,7 @@ func (cs *ChainsService) LoadChains() error {
 
 // GetChainMessages retrieves messages associated with a specific chain.
 func (cs *ChainsService) GetChainMessages(id string) ([]string, error) {
-	messages, err := cs.messagesRepo.ReadAllMessages(id)
+	messages, err := cs.messagesRepo.GetAllGuildMessages(id)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +142,7 @@ func (cs *ChainsService) GetChainsMemUsage() int64 {
 
 	var totalSize int64
 	for _, chain := range cs.chainsMap {
-		totalSize += int64(unsafe.Sizeof(chain))
+		totalSize += int64(utils.MeasureSize(chain))
 	}
 	return totalSize
 }

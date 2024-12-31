@@ -1,7 +1,8 @@
 package services
 
 import (
-	"log"
+	"rolando/app/log"
+	"rolando/app/repositories"
 	"strings"
 	"sync"
 
@@ -13,14 +14,16 @@ type DataFetchService struct {
 	MessageLimit   int
 	MaxFetchErrors int
 	ChainService   *ChainsService
+	messagesRepo   *repositories.MessagesRepository
 }
 
-func NewDataFetchService(session *discordgo.Session, chainService *ChainsService) *DataFetchService {
+func NewDataFetchService(session *discordgo.Session, chainService *ChainsService, messagesRepo *repositories.MessagesRepository) *DataFetchService {
 	return &DataFetchService{
 		Session:        session,
 		MessageLimit:   750000,
 		MaxFetchErrors: 5,
 		ChainService:   chainService,
+		messagesRepo:   messagesRepo,
 	}
 }
 
@@ -41,9 +44,9 @@ func (d *DataFetchService) FetchAllGuildMessages(guildID string) ([]string, erro
 		wg.Add(1)
 		go func(channel *discordgo.Channel) {
 			defer wg.Done()
-			messages, err := d.fetchChannelMessages(channel.ID)
+			messages, err := d.fetchChannelMessages(channel)
 			if err != nil {
-				log.Printf("Failed to fetch messages for channel %s: %v", channel.Name, err)
+				log.Log.Errorf("Failed to fetch messages for channel #%s: %v", channel.Name, err)
 				return
 			}
 			messageCh <- messages
@@ -58,21 +61,21 @@ func (d *DataFetchService) FetchAllGuildMessages(guildID string) ([]string, erro
 		allMessages = append(allMessages, msgs...)
 	}
 
-	log.Printf("Fetched %d messages in guild %s", len(allMessages), guildID)
+	log.Log.Infof("Fetched %d messages in guild %s", len(allMessages), guild.Name)
 	return allMessages, nil
 }
 
-func (d *DataFetchService) fetchChannelMessages(channelID string) ([]string, error) {
+func (d *DataFetchService) fetchChannelMessages(channel *discordgo.Channel) ([]string, error) {
 	var messages []string
 	var lastMessageID string
 	errorCount := 0
 
 	for len(messages) < d.MessageLimit {
-		batch, err := d.getMessageBatch(channelID, lastMessageID)
+		batch, err := d.getMessageBatch(channel.ID, lastMessageID)
 		if err != nil {
 			errorCount++
 			if errorCount > d.MaxFetchErrors {
-				log.Printf("Error limit reached for channel %s: %v", channelID, err)
+				log.Log.Warnf("Error limit reached for channel #%s: %v", channel.Name, err)
 				break
 			}
 			continue
@@ -86,11 +89,13 @@ func (d *DataFetchService) fetchChannelMessages(channelID string) ([]string, err
 			messages = append(messages, msg.Content)
 			// Update chain state (assumes ChainService has an UpdateChainState method)
 			go d.ChainService.UpdateChainState(msg.GuildID, []string{msg.Content})
+
 		}
+		go d.messagesRepo.AddMessagesToGuild(channel.GuildID, messages)
 		lastMessageID = batch[len(batch)-1].ID
 	}
 
-	log.Printf("Fetched %d messages from channel %s", len(messages), channelID)
+	log.Log.Infof("Fetched %d messages from channel #%s", len(messages), channel.Name)
 	return messages, nil
 }
 

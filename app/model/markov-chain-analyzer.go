@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
-	"unsafe"
+	"rolando/app/utils"
 )
 
 type ChainAnalytics struct {
@@ -58,7 +58,7 @@ func (mca *MarkovChainAnalyzer) GetAnalytics() ChainAnalytics {
 		ReplyRate:       fmt.Sprintf("%d", mca.chain.ReplyRate),
 		Words:           fmt.Sprintf("%d", len(mca.chain.State)),
 		Messages:        fmt.Sprintf("%d", mca.chain.MessageCounter),
-		Size:            fmt.Sprintf("%d bytes", int(unsafe.Sizeof(mca.chain))),
+		Size:            utils.FormatBytes(uint64(utils.MeasureSize(mca.chain))),
 	}
 }
 
@@ -71,6 +71,6 @@ func (mca *MarkovChainAnalyzer) GetRawAnalytics() NumericChainAnalytics {
 		ReplyRate:       mca.chain.ReplyRate,
 		Words:           len(mca.chain.State),
 		Messages:        mca.chain.MessageCounter,
-		Size:            int(unsafe.Sizeof(mca.chain)),
+		Size:            int(utils.MeasureSize(mca.chain)),
 	}
 }

@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"math/rand"
 	"rolando/app/utils"
 	"sync"
 )
@@ -57,19 +58,32 @@ func (ms *MediaStorage) RemoveMedia(url string) {
 func (ms *MediaStorage) GetMedia(mediaType string) (string, error) {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
+
+	var keys []string
+	// Extract keys based on the media type
 	switch mediaType {
 	case "gif":
 		for url := range ms.gifs {
-			return url, nil
+			keys = append(keys, url)
 		}
 	case "image":
 		for url := range ms.images {
-			return url, nil
+			keys = append(keys, url)
 		}
 	case "video":
 		for url := range ms.videos {
-			return url, nil
+			keys = append(keys, url)
 		}
+	default:
+		return "", errors.New("media type not found")
 	}
-	return "", errors.New("media type not found")
+
+	// If no media found, return an error
+	if len(keys) == 0 {
+		return "", errors.New("no media found for this type")
+	}
+
+	// Seed the random number generator and pick a random key
+	randomIndex := rand.Intn(len(keys))
+	return keys[randomIndex], nil
 }

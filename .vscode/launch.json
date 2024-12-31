@@ -6,7 +6,7 @@
       "name": "Launch in Debug",
       "type": "go",
       "request": "launch",
-      "program": "${workspaceFolder}/cmd",
+      "program": "${workspaceFolder}/app",
       "env": {},
       "args": [],
       "cwd": "${workspaceFolder}",

@@ -1,22 +1,21 @@
 .PHONY: all build test lint clean dev build-dev run
 
 ifeq ($(OS),Windows_NT)
-  EXE := .exe
-  RM = del
+  EXE 	:= .exe
+  RM 		= del
 else
-  EXE :=
-  RM = rm -f
+  EXE 	:=
+  RM 		= rm -f
 endif
 
-VERSION         := 0.0.0
+VERSION         := 3.0.0
 BUILD_DIR       := bin
 MAIN_PACKAGE    := ./app
 BUILD						:= $(shell git rev-parse --short HEAD)
 ENV 						?= production
 
 ifeq ($(ENV), production)
-	BINARY_NAME   = dev
-	# rolando@$(VERSION)
+	BINARY_NAME   = rolando@$(VERSION)
 else
 	BINARY_NAME   = dev
 endif

@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -12,6 +13,10 @@ var (
 	Token         string
 	ApplicationID string
 	Intents       discordgo.Intent
+	OwnerIDs      []string
+	Version       string
+	Build         string
+	Env           string
 )
 
 func init() {
@@ -30,6 +35,12 @@ func init() {
 	ApplicationID = os.Getenv("APPLICATION_ID")
 	if ApplicationID == "" {
 		log.Fatalf("APPLICATION_ID not set in the environment")
+	}
+	ownerIDsStr := os.Getenv("OWNER_IDS")
+	if ownerIDsStr == "" {
+		log.Println("OWNER_IDS not set in the environment")
+	} else {
+		OwnerIDs = strings.Split(ownerIDsStr, ",")
 	}
 
 	Intents = (discordgo.IntentDirectMessageReactions |

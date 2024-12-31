@@ -36,7 +36,7 @@ func (h *MessageHandler) OnMessageCreate(s *discord.Session, m *discord.MessageC
 	}
 
 	// Fetch chain for the guild
-	chain, err := h.ChainsService.GetChain(guild.ID, guild.Name)
+	chain, err := h.ChainsService.GetChain(guild.ID)
 	if err != nil {
 		log.Log.Errorf("Failed to fetch chain for guild %s: %v", guild.ID, err)
 		return
@@ -59,8 +59,7 @@ func (h *MessageHandler) OnMessageCreate(s *discord.Session, m *discord.MessageC
 	}
 
 	// Check if the bot is mentioned
-	isMentioned := utils.MentionsUser(m.Message, s.State.User.ID, guild)
-	if isMentioned {
+	if utils.MentionsUser(m.Message, s.State.User.ID, guild) {
 		// Reply when mentioned
 		go func() {
 			if err := h.sendReply(m.ChannelID, chain); err != nil {

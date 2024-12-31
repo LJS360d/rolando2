@@ -31,6 +31,9 @@ func main() {
 	fmt.Println("Version: ", Version)
 	fmt.Println("Build: ", Build)
 	fmt.Println("Env: ", Env)
+	config.Version = Version
+	config.Build = Build
+	config.Env = Env
 	ds, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
 		log.Log.Fatalf("error creating Discord session,", err)
@@ -67,15 +70,17 @@ func main() {
 	if err != nil {
 		log.Log.Fatalf("error creating chains repository: %v", err)
 	}
-	chainsService := services.NewChainsService(*chainsRepo, *messagesRepo)
-	dataFetchService := services.NewDataFetchService(ds, chainsService)
+	chainsService := services.NewChainsService(ds, *chainsRepo, *messagesRepo)
+	dataFetchService := services.NewDataFetchService(ds, chainsService, messagesRepo)
 	// Handlers
 	messagesHandler := handlers.NewMessageHandler(ds, chainsService)
-	commandsHandler := handlers.NewSlashCommandsHandler(ds, chainsService, dataFetchService)
+	commandsHandler := handlers.NewSlashCommandsHandler(ds, chainsService)
+	buttonsHandler := handlers.NewButtonsHandler(ds, dataFetchService, chainsService)
 	// Register
 	chainsService.LoadChains()
 	ds.AddHandler(commandsHandler.OnSlashCommandInteraction)
 	ds.AddHandler(messagesHandler.OnMessageCreate)
+	ds.AddHandler(buttonsHandler.OnButtonInteraction)
 	// Wait here until SIGINT or other term signal is received.
 	log.Log.Infof("Logged in as %s!", ds.State.User.String())
 	sc := make(chan os.Signal, 1)

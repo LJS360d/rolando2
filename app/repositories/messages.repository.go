@@ -1,8 +1,14 @@
 package repositories
 
 import (
+	stdlog "log"
+	"os"
+	"rolando/app/log"
+	"time"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type Message struct {
@@ -17,7 +23,16 @@ type MessagesRepository struct {
 
 func NewMessagesRepository(dbPath string) (*MessagesRepository, error) {
 	// Open SQLite database
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.New(
+			stdlog.New(os.Stdout, "\r\n", stdlog.Flags()),
+			logger.Config{
+				SlowThreshold: time.Second,   // Set threshold to 1 second to suppress normal slow queries
+				LogLevel:      logger.Silent, // Show Info level logs (optional)
+				Colorful:      true,          // Disable colored output
+			},
+		),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -27,6 +42,19 @@ func NewMessagesRepository(dbPath string) (*MessagesRepository, error) {
 		return nil, err
 	}
 
+	// Set up database session optimizations
+	db = db.Session(&gorm.Session{
+		// Enable WAL mode for better concurrency (especially in write-heavy workloads)
+		// SQLite WAL mode is more performant in multi-threaded scenarios
+		NowFunc: time.Now, // Set the `Now` function to get the correct time on queries
+	})
+
+	// Ensure indexes are created for performance
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_guild_id ON messages(guild_id);").Error; err != nil {
+		return nil, err
+	}
+
+	// Return the repository with the configured database connection
 	return &MessagesRepository{DB: db}, nil
 }
 
@@ -44,11 +72,30 @@ func (repo *MessagesRepository) AppendMessage(guildID, content string) error {
 	return nil
 }
 
-// ReadAllMessages fetches all messages for a specific guild
-func (repo *MessagesRepository) ReadAllMessages(guildID string) ([]Message, error) {
+func (repo *MessagesRepository) AddMessagesToGuild(guildID string, messages []string) error {
+	// Prepare a slice of Message objects
+	var messageRecords []Message
+	for _, content := range messages {
+		messageRecords = append(messageRecords, Message{
+			GuildID: guildID,
+			Content: content,
+		})
+	}
+
+	// Perform batch insert using CreateInBatches
+	if err := repo.DB.CreateInBatches(messageRecords, 100).Error; err != nil {
+		log.Log.Errorf("Error inserting messages: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// GetAllGuildMessages fetches all messages for a specific guild
+func (repo *MessagesRepository) GetAllGuildMessages(guildID string) ([]Message, error) {
 	var messages []Message
 	// Query messages for a specific guild, ordered by timestamp (default order)
-	if err := repo.DB.Where("guild_id = ?", guildID).Order("created_at asc").Find(&messages).Error; err != nil {
+	if err := repo.DB.Where("guild_id = ?", guildID).Find(&messages).Error; err != nil {
 		return nil, err
 	}
 	return messages, nil
