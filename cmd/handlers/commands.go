@@ -7,6 +7,8 @@ import (
 	"rolando/cmd/services"
 	"rolando/cmd/utils"
 	"rolando/config"
+	"strconv"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -72,6 +74,58 @@ func NewSlashCommandsHandler(
 			},
 			Handler: handler.analyticsCommand,
 		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "togglepings",
+				Description: "Toggles wether pings are enabled or not",
+			},
+			Handler: handler.togglePingsCommand,
+		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "replyrate",
+				Description: "Sets the reply rate for the bot",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionInteger,
+						Name:        "rate",
+						Description: "the rate to set",
+						Required:    false,
+					},
+				},
+			},
+			Handler: handler.replyRateCommand,
+		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "opinion",
+				Description: "Generates a random opinion based on the provided seed",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "about",
+						Description: "The seed of the message",
+						Required:    true,
+					},
+				},
+			},
+			Handler: handler.opinionCommand,
+		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "wipe",
+				Description: "Deletes the given argument `data` from the training data",
+				Options: []*discordgo.ApplicationCommandOption{
+					{
+						Type:        discordgo.ApplicationCommandOptionString,
+						Name:        "data",
+						Description: "The data to be deleted",
+						Required:    true,
+					},
+				},
+			},
+			Handler: handler.wipeCommand,
+		},
 	})
 
 	return handler
@@ -97,6 +151,7 @@ func (h *SlashCommandsHandler) OnSlashCommandInteraction(s *discordgo.Session, i
 	}
 }
 
+// implementation of /train command
 func (h *SlashCommandsHandler) trainCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !h.checkAdmin(i) {
 		return
@@ -152,6 +207,7 @@ If you wish to exclude specific channels, revoke my typing permissions in those 
 	})
 }
 
+// implementation of /gif command
 func (h *SlashCommandsHandler) gifCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
@@ -169,6 +225,7 @@ func (h *SlashCommandsHandler) gifCommand(s *discordgo.Session, i *discordgo.Int
 	})
 }
 
+// implementation of /image command
 func (h *SlashCommandsHandler) imageCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
@@ -186,6 +243,7 @@ func (h *SlashCommandsHandler) imageCommand(s *discordgo.Session, i *discordgo.I
 	})
 }
 
+// implementation of /video command
 func (h *SlashCommandsHandler) videoCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	chain, err := h.ChainsService.GetChain(i.GuildID)
 	if err != nil {
@@ -203,6 +261,7 @@ func (h *SlashCommandsHandler) videoCommand(s *discordgo.Session, i *discordgo.I
 	})
 }
 
+// implementation of /analytics command
 func (h *SlashCommandsHandler) analyticsCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Fetch the chain data for the given guild
 	chain, err := h.ChainsService.GetChain(i.GuildID)
@@ -286,43 +345,229 @@ func (h *SlashCommandsHandler) analyticsCommand(s *discordgo.Session, i *discord
 	}
 }
 
+// implementation of /togglepings command
+func (h *SlashCommandsHandler) togglePingsCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !h.checkAdmin(i, "You are not authorized to toggle pings.") {
+		return
+	}
+
+	guildID := i.GuildID
+	chain, err := h.ChainsService.GetChain(guildID)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to retrieve chain data.",
+			},
+		})
+		return
+	}
+
+	chain.Pings = !chain.Pings
+	if _, err := h.ChainsService.UpdateChainDocument(chain.ID, map[string]interface{}{"pings": chain.Pings}); err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to toggle pings state.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	state := "disabled"
+	if chain.Pings {
+		state = "enabled"
+	}
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Pings are now `" + state + "`",
+		},
+	})
+}
+
+// implementation of /replyrate command
+func (h *SlashCommandsHandler) replyRateCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	options := i.ApplicationCommandData().Options
+	var rate *int
+	for _, option := range options {
+		if option.Name == "rate" && option.Type == discordgo.ApplicationCommandOptionInteger {
+			value := int(option.IntValue())
+			rate = &value
+			break
+		}
+	}
+
+	guildID := i.GuildID
+	chain, err := h.ChainsService.GetChain(guildID)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to retrieve chain data.",
+			},
+		})
+		return
+	}
+
+	if rate != nil {
+		if !h.checkAdmin(i, "You are not authorized to change the reply rate.") {
+			return
+		}
+		chain.ReplyRate = *rate
+		if _, err := h.ChainsService.UpdateChainDocument(chain.ID, map[string]interface{}{"replyRate": *rate}); err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Failed to update reply rate.",
+				},
+			})
+			return
+		}
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Set reply rate to `" + strconv.Itoa(*rate) + "`",
+			},
+		})
+		return
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Current rate is `" + strconv.Itoa(chain.ReplyRate) + "`",
+		},
+	})
+}
+
+// implementation of /opinion command
+func (h *SlashCommandsHandler) opinionCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	options := i.ApplicationCommandData().Options
+	var about string
+	for _, option := range options {
+		if option.Name == "about" && option.Type == discordgo.ApplicationCommandOptionString {
+			about = option.StringValue()
+			break
+		}
+	}
+
+	if about == "" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You must provide a word as the seed.",
+			},
+		})
+		return
+	}
+
+	words := strings.Split(about, " ")
+	seed := words[len(words)-1]
+
+	chain, err := h.ChainsService.GetChain(i.GuildID)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to retrieve chain data.",
+			},
+		})
+		return
+	}
+
+	msg := chain.GenerateText(seed, utils.GetRandom(8, 40)) // Generate text with random length between 8 and 40
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: msg,
+		},
+	})
+}
+
+// implementation of /wipe command
+func (h *SlashCommandsHandler) wipeCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	options := i.ApplicationCommandData().Options
+	var data string
+	for _, option := range options {
+		if option.Name == "data" && option.Type == discordgo.ApplicationCommandOptionString {
+			data = option.StringValue()
+			break
+		}
+	}
+
+	if data == "" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You must provide the data to be erased.",
+			},
+		})
+		return
+	}
+
+	chain, err := h.ChainsService.GetChain(i.GuildID)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to retrieve chain data.",
+			},
+		})
+		return
+	}
+
+	err = h.ChainsService.DeleteTextData(i.GuildID, data)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to delete the specified data.",
+			},
+		})
+		return
+	}
+
+	chain.Delete(data)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Deleted `%s`", data),
+		},
+	})
+}
+
+// implementation of /channels command
+// TODO
+
+// implementation of /src command
+// TODO
+
 func (h *SlashCommandsHandler) checkAdmin(i *discordgo.InteractionCreate, msg ...string) bool {
-	// Check if the user is in the list of owner IDs
 	for _, ownerID := range config.OwnerIDs {
 		if i.Member.User.ID == ownerID {
 			return true
 		}
 	}
-	/*
-		// Check if the user has Administrator permissions
-		perms, err := h.Client.check(i.Member.User.ID, i.GuildID)
-		if err != nil {
-			// Log the error if necessary
-			return false
-		}
 
-		if perms&discordgo.PermissionAdministrator != 0 {
-			return true
-		}
+	perms := i.Member.Permissions
+	if perms&discordgo.PermissionAdministrator != 0 {
+		return true
+	}
+	var content string
+	if len(msg) > 0 {
+		content = strings.Join(msg, "")
+	} else {
+		content = "You are not authorized to use this command."
+	}
+	h.Client.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
 
-		// Respond with a message if the user is not authorized
-		if len(msg) > 0 {
-			_ = h.Client.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: msg[0],
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-		} else {
-			_ = h.Client.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "You are not authorized to use this command.",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-		}
-	*/
 	return false
 }

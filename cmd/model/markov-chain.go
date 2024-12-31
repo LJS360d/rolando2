@@ -94,6 +94,29 @@ func (mc *MarkovChain) GenerateText(startWord string, length int) string {
 	return generatedText.String()
 }
 
+func (mc *MarkovChain) Delete(message string) {
+	if strings.HasPrefix(message, "https://") {
+		mc.MediaStorage.RemoveMedia(message)
+		return
+	}
+
+	tokens := mc.Tokenize(message)
+	for i := 0; i < len(tokens)-1; i++ {
+		currentWord := tokens[i]
+		nextWord := tokens[i+1]
+
+		if nextWordMap, exists := mc.State[currentWord]; exists {
+			if _, exists := nextWordMap[nextWord]; exists {
+				delete(nextWordMap, nextWord)
+				// Clean up the map if it's empty
+				if len(nextWordMap) == 0 {
+					delete(mc.State, currentWord)
+				}
+			}
+		}
+	}
+}
+
 func (mc *MarkovChain) StochasticChoice(options []string, weights []float64) string {
 	totalWeight := 0.0
 	for _, weight := range weights {

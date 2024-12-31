@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	DB_PATH = ".tmp/rolando.db"
+	DB_PATH = "rolando.db"
 )
 
 func main() {
