@@ -45,6 +45,19 @@ func (cs *ChainsService) GetChain(id string) (*model.MarkovChain, error) {
 	return cs.CreateChain(id, guild.Name)
 }
 
+func (cs *ChainsService) GetAllChains() ([]*model.MarkovChain, error) {
+	chainDocs, err := cs.chainsRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	var chains []*model.MarkovChain
+	for _, chainDoc := range chainDocs {
+		chain, _ := cs.GetChain(chainDoc.ID)
+		chains = append(chains, chain)
+	}
+	return chains, nil
+}
+
 // GetChainDocument retrieves the chain document from the repository.
 func (cs *ChainsService) GetChainDocument(id string) (*repositories.Chain, error) {
 	return cs.chainsRepo.GetChainByID(id)

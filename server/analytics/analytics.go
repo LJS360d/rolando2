@@ -7,7 +7,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	wkt "google.golang.org/protobuf/types/known/wrapperspb"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type AnalyticsServerImpl struct {
@@ -21,7 +22,7 @@ func NewAnalyticsServer(chainsService *services.ChainsService) *AnalyticsServerI
 	}
 }
 
-func (s *AnalyticsServerImpl) GetChainAnalytics(ctx context.Context, req *wkt.StringValue) (*ChainAnalytics, error) {
+func (s *AnalyticsServerImpl) GetChainAnalytics(ctx context.Context, req *wrapperspb.StringValue) (*ChainAnalytics, error) {
 	chainId := req.GetValue()
 	chain, err := s.chainsService.GetChain(chainId)
 	if err != nil {
@@ -42,7 +43,7 @@ func (s *AnalyticsServerImpl) GetChainAnalytics(ctx context.Context, req *wkt.St
 	return chainAnalytics, nil
 }
 
-/* func (s *AnalyticsServerImpl) GetAllChainsAnalytics(ctx context.Context, req *emptypb.Empty) (*ChainAnalyticsList, error) {
+func (s *AnalyticsServerImpl) GetAllChainsAnalytics(ctx context.Context, req *emptypb.Empty) (*ChainAnalyticsList, error) {
 	chains, err := s.chainsService.GetAllChains()
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -65,4 +66,3 @@ func (s *AnalyticsServerImpl) GetChainAnalytics(ctx context.Context, req *wkt.St
 	}
 	return &chainAnalyticsList, nil
 }
-*/
