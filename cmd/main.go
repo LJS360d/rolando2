@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"rolando/config"
+	"rolando/server"
 	"strconv"
 	"syscall"
 
@@ -77,17 +79,21 @@ func main() {
 	commandsHandler := handlers.NewSlashCommandsHandler(ds, chainsService)
 	buttonsHandler := handlers.NewButtonsHandler(ds, dataFetchService, chainsService)
 	log.Log.Infoln("All services initialized")
-	// Register
 	chainsService.LoadChains()
 	ds.AddHandler(commandsHandler.OnSlashCommandInteraction)
 	ds.AddHandler(messagesHandler.OnMessageCreate)
 	ds.AddHandler(buttonsHandler.OnButtonInteraction)
+	log.Log.Infof("Logged in as %s", ds.State.User.String())
+	// start the gRPC server
+	grpcServer := server.NewGrpcServer(chainsService)
+	grpcServer.Start()
+
 	// Wait here until SIGINT or other term signal is received.
-	log.Log.Infof("Logged in as %s!", ds.State.User.String())
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	// Cleanly close down the Discord session.
 	ds.Close()
+	grpcServer.Shutdown(context.Background())
 }

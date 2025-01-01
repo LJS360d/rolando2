@@ -18,6 +18,7 @@ var (
 	Build         string
 	Env           string
 	DatabasePath  string
+	GrpcPort      string
 )
 
 func init() {
@@ -47,6 +48,11 @@ func init() {
 	if DatabasePath == "" {
 		log.Println("DATABASE_PATH not set in the environment")
 		DatabasePath = "rolando.db"
+	}
+	GrpcPort = os.Getenv("GRPC_PORT")
+	if GrpcPort == "" {
+		log.Println("GRPC_PORT not set in the environment")
+		GrpcPort = "5051"
 	}
 
 	Intents = (discordgo.IntentDirectMessageReactions |

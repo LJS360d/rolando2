@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+package analytics;
+
+option go_package = "rolando/server/analytics";
+
+service Analytics {
+  // given the ID for a chain, return the analytics for that chain
+  rpc GetChainAnalytics(google.protobuf.StringValue) returns (ChainAnalytics) {}
+  // returns all chain analytics
+  rpc GetAllChainsAnalytics(google.protobuf.Empty) returns (ChainAnalyticsList) {}
+}
+
+message ChainAnalytics {
+  int32 complexityScore = 1;
+  int32 gifs = 2;
+  int32 images = 3;
+  int32 videos = 4;
+  int32 replyRate = 5;
+  int32 words = 6;
+  int32 messages = 7;
+  int64 bytes = 8;
+}
+
+message ChainAnalyticsList {
+  repeated ChainAnalytics analytics = 1;
+}

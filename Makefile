@@ -1,4 +1,4 @@
-.PHONY: all build test lint clean dev build-dev run
+.PHONY: all gen build test lint clean dev build-dev run
 
 ifeq ($(OS),Windows_NT)
   EXE 	:= .exe
@@ -49,3 +49,13 @@ dev:
 build-dev: ENV=development
 build-dev:
 	go build $(LDFLAGS) -o $(BUILDPATH) $(MAIN_PACKAGE)
+
+
+GRPC_OUT			:=.
+PB_OUT				:=.
+GRPC_OPT 			:=paths=source_relative
+PB_OPT 				:=paths=source_relative
+PROTO 				?= $(shell find . -name "*.proto")
+
+gen:
+	protoc --go_out=$(PB_OUT) --go_opt=$(PB_OPT) --go-grpc_out=$(GRPC_OUT) --go-grpc_opt=$(GRPC_OPT) $(PROTO)

@@ -37,3 +37,6 @@ bin/
 *.db-*
 *.db-journal
 *.sqlite
+
+# protoc generated files
+*.pb.go

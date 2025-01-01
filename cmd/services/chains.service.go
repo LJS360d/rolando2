@@ -119,7 +119,7 @@ func (cs *ChainsService) LoadChains() error {
 			cs.messagesRepo,
 		)
 	}
-	log.Log.Infof("Loaded %d chains!", len(cs.chainsMap))
+	log.Log.Infof("Loaded %d chains", len(cs.chainsMap))
 	return nil
 }
 
