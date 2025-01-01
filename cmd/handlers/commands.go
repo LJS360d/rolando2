@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"reflect"
 	"rolando/cmd/log"
 	"rolando/cmd/model"
 	"rolando/cmd/services"
@@ -126,16 +127,54 @@ func NewSlashCommandsHandler(
 			},
 			Handler: handler.wipeCommand,
 		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "channels",
+				Description: "View which channels are being used by the bot",
+			},
+			Handler: handler.channelsCommand,
+		},
+		{
+			Command: &discordgo.ApplicationCommand{
+				Name:        "src",
+				Description: "Provides the URL to the repository with bot source code.",
+			},
+			Handler: handler.srcCommand,
+		},
 	})
 
 	return handler
 }
 
-// Register commands and build the command map
+// registerCommands registers only new or modified slash commands
 func (h *SlashCommandsHandler) registerCommands(commands []SlashCommand) {
+	// Fetch currently registered commands from Discord
+	registeredCommands, err := h.Client.ApplicationCommands(h.Client.State.User.ID, "")
+	if err != nil {
+		log.Log.Errorf("Failed to fetch registered commands: %v", err)
+		registeredCommands = []*discordgo.ApplicationCommand{}
+	}
+
+	// Create a map of registered commands for fast lookup
+	registeredCommandsMap := make(map[string]*discordgo.ApplicationCommand)
+	for _, cmd := range registeredCommands {
+		registeredCommandsMap[cmd.Name] = cmd
+	}
+
+	// Iterate through new commands and check if they are already registered
 	for _, cmd := range commands {
-		h.Commands[cmd.Command.Name] = cmd.Handler
-		h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+		if existingCmd, exists := registeredCommandsMap[cmd.Command.Name]; exists {
+			// Compare if the new command differs in some way (e.g., updated description or options)
+			if !shouldRefreshCommand(*existingCmd, *cmd.Command) {
+				log.Log.Infof("Updating slash command: %s", cmd.Command.Name)
+				h.Client.ApplicationCommandDelete(h.Client.State.User.ID, "", existingCmd.ID)
+				h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+			}
+		} else {
+			// Register the new command
+			log.Log.Infof("Registering slash command: %s", cmd.Command.Name)
+			h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+		}
 	}
 }
 
@@ -150,6 +189,8 @@ func (h *SlashCommandsHandler) OnSlashCommandInteraction(s *discordgo.Session, i
 		handler(s, i) // Call the function bound to this command
 	}
 }
+
+// ------------- Commands -------------
 
 // implementation of /train command
 func (h *SlashCommandsHandler) trainCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -548,10 +589,81 @@ func (h *SlashCommandsHandler) wipeCommand(s *discordgo.Session, i *discordgo.In
 }
 
 // implementation of /channels command
-// TODO
+func (h *SlashCommandsHandler) channelsCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	guild, err := s.State.Guild(i.GuildID)
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Failed to retrieve guild information.",
+			},
+		})
+		return
+	}
+
+	var channels []*discordgo.Channel
+	for _, channel := range guild.Channels {
+		if channel.Type != discordgo.ChannelTypeGuildVoice && channel.Type != discordgo.ChannelTypeGuildCategory {
+			channels = append(channels, channel)
+		}
+	}
+
+	accessEmote := func(hasAccess bool) string {
+		if hasAccess {
+			return ":green_circle:"
+		}
+		return ":red_circle:"
+	}
+
+	channelsPermissionMap := make([]map[string]string, 0)
+	for _, ch := range channels {
+		hasAccess := channelAccessCheck(s, ch.ID)
+		channelsPermissionMap = append(channelsPermissionMap, map[string]string{
+			"name":   ch.Name,
+			"access": accessEmote(hasAccess),
+		})
+	}
+
+	channelFields := make([]*discordgo.MessageEmbedField, 0)
+	for _, cp := range channelsPermissionMap {
+		channelFields = append(channelFields, &discordgo.MessageEmbedField{
+			Name:   " ",
+			Value:  fmt.Sprintf("%s #%s", cp["access"], cp["name"]),
+			Inline: true,
+		})
+	}
+
+	// Chunk fields into groups of 15
+	chunkedFields := chunkFields(channelFields, 15)
+
+	embeds := make([]*discordgo.MessageEmbed, 0)
+	for _, fields := range chunkedFields {
+		embeds = append(embeds, &discordgo.MessageEmbed{
+			Title:       "Available Channels",
+			Description: channelsDescription(":green_circle:", ":red_circle:"),
+			Color:       0xFFD700, // Gold color
+			Fields:      append([]*discordgo.MessageEmbedField{{Name: "\t", Value: "\t"}}, fields...),
+		})
+	}
+
+	paginateEmbeds(s, i, embeds)
+}
 
 // implementation of /src command
-// TODO
+func (h *SlashCommandsHandler) srcCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	repoURL := "YOUR_REPO_URL_HERE"
+	err := h.Client.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: repoURL,
+		},
+	})
+	if err != nil {
+		log.Log.Errorf("Failed to send repo URL response: %v", err)
+	}
+}
+
+// ------------- Helpers -------------
 
 func (h *SlashCommandsHandler) checkAdmin(i *discordgo.InteractionCreate, msg ...string) bool {
 	for _, ownerID := range config.OwnerIDs {
@@ -579,4 +691,84 @@ func (h *SlashCommandsHandler) checkAdmin(i *discordgo.InteractionCreate, msg ..
 	})
 
 	return false
+}
+
+func channelsDescription(hasAccess string, noAccess string) string {
+	return fmt.Sprintf(
+		`Channels the bot has access to are marked with: %s
+While channels with no access are marked with: %s
+
+Make a channel accessible by giving %s these permissions:
+%s %s %s`,
+		hasAccess,
+		noAccess,
+		"**ALL**",
+		"`View Channel`", "`Send Messages`", "`Read Message History`",
+	)
+}
+
+func channelAccessCheck(s *discordgo.Session, channelID string) bool {
+	channel, err := s.State.Channel(channelID)
+	if err != nil {
+		return false
+	}
+	permissions, err := s.UserChannelPermissions(s.State.User.ID, channel.ID)
+	if err != nil {
+		return false
+	}
+	return permissions&discordgo.PermissionViewChannel != 0
+}
+
+func chunkFields(fields []*discordgo.MessageEmbedField, chunkSize int) [][]*discordgo.MessageEmbedField {
+	var chunks [][]*discordgo.MessageEmbedField
+	for i := 0; i < len(fields); i += chunkSize {
+		end := i + chunkSize
+		if end > len(fields) {
+			end = len(fields)
+		}
+		chunks = append(chunks, fields[i:end])
+	}
+	return chunks
+}
+
+func paginateEmbeds(s *discordgo.Session, i *discordgo.InteractionCreate, embeds []*discordgo.MessageEmbed) {
+	if len(embeds) == 0 {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "No channels available.",
+			},
+		})
+		return
+	}
+
+	for _, embed := range embeds {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{embed},
+			},
+		})
+	}
+}
+
+// compares two commands to check if they are identical in the significant fields
+func shouldRefreshCommand(cached, loaded discordgo.ApplicationCommand) bool {
+	// For simplicity, compare the name, description, and options here. You can extend this logic if necessary.
+	if cached.Name != loaded.Name {
+		return false
+	}
+	if cached.Description != loaded.Description {
+		return false
+	}
+	if len(cached.Options) != len(loaded.Options) {
+		return false
+	}
+	// Compare command options, if any
+	for i, option := range cached.Options {
+		if !reflect.DeepEqual(option, loaded.Options[i]) {
+			return false
+		}
+	}
+	return true
 }
