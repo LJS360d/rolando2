@@ -17,6 +17,7 @@ var (
 	Version       string
 	Build         string
 	Env           string
+	DatabasePath  string
 )
 
 func init() {
@@ -41,6 +42,11 @@ func init() {
 		log.Println("OWNER_IDS not set in the environment")
 	} else {
 		OwnerIDs = strings.Split(ownerIDsStr, ",")
+	}
+	DatabasePath = os.Getenv("DATABASE_PATH")
+	if DatabasePath == "" {
+		log.Println("DATABASE_PATH not set in the environment")
+		DatabasePath = "rolando.db"
 	}
 
 	Intents = (discordgo.IntentDirectMessageReactions |

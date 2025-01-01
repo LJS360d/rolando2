@@ -23,10 +23,6 @@ var (
 	Build   string
 )
 
-const (
-	DB_PATH = "rolando.db"
-)
-
 func main() {
 	config.Version = Version
 	config.Build = Build
@@ -66,11 +62,11 @@ func main() {
 	log.Log.Infoln("Presence updated")
 	log.Log.Infoln("Initializing services...")
 	// DI
-	messagesRepo, err := repositories.NewMessagesRepository(DB_PATH)
+	messagesRepo, err := repositories.NewMessagesRepository(config.DatabasePath)
 	if err != nil {
 		log.Log.Fatalf("error creating messages repository: %v", err)
 	}
-	chainsRepo, err := repositories.NewChainsRepository(DB_PATH)
+	chainsRepo, err := repositories.NewChainsRepository(config.DatabasePath)
 	if err != nil {
 		log.Log.Fatalf("error creating chains repository: %v", err)
 	}
