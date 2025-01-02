@@ -5,6 +5,7 @@ import (
 	"rolando/cmd/services"
 	"rolando/config"
 	"rolando/server/analytics"
+	"rolando/server/auth"
 	"rolando/server/bot"
 
 	"github.com/bwmarrin/discordgo"
@@ -33,7 +34,10 @@ func (s *HttpServer) Start() {
 
 	analyticsController := analytics.NewController(s.ChainsService, s.DiscordSession)
 	botController := bot.NewController(s.ChainsService, s.DiscordSession)
+	authController := auth.NewController(s.DiscordSession)
 	// Routes
+	r.GET("/auth/@me", authController.GetUser)
+
 	r.GET("/analytics/:chain", analyticsController.GetChainAnalytics)
 	r.GET("/analytics", analyticsController.GetAllChainsAnalytics)
 

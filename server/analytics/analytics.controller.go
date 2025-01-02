@@ -36,17 +36,17 @@ func (s *AnalyticsController) GetChainAnalytics(c *gin.Context) {
 	rawAnalytics := analyzer.GetRawAnalytics()
 
 	c.JSON(200, gin.H{
-		"complexityScore": rawAnalytics.ComplexityScore,
-		"gifs":            rawAnalytics.Gifs,
-		"images":          rawAnalytics.Images,
-		"videos":          rawAnalytics.Videos,
-		"replyRate":       rawAnalytics.ReplyRate,
-		"words":           rawAnalytics.Words,
-		"messages":        rawAnalytics.Messages,
-		"bytes":           rawAnalytics.Size,
-		"id":              chain.ID,
-		"name":            chainDoc.Name,
-		"maxSizeMb":       chainDoc.MaxSizeMb,
+		"complexity_score": rawAnalytics.ComplexityScore,
+		"gifs":             rawAnalytics.Gifs,
+		"images":           rawAnalytics.Images,
+		"videos":           rawAnalytics.Videos,
+		"reply_rate":       rawAnalytics.ReplyRate,
+		"words":            rawAnalytics.Words,
+		"messages":         rawAnalytics.Messages,
+		"bytes":            rawAnalytics.Size,
+		"id":               chain.ID,
+		"name":             chainDoc.Name,
+		"max_size_mb":      chainDoc.MaxSizeMb,
 	})
 }
 
@@ -69,17 +69,17 @@ func (s *AnalyticsController) GetAllChainsAnalytics(c *gin.Context) {
 		// Get the analytics data
 		rawAnalytics := analyzer.GetRawAnalytics()
 		chainAnalytics := gin.H{
-			"complexityScore": rawAnalytics.ComplexityScore,
-			"gifs":            rawAnalytics.Gifs,
-			"images":          rawAnalytics.Images,
-			"videos":          rawAnalytics.Videos,
-			"replyRate":       rawAnalytics.ReplyRate,
-			"words":           rawAnalytics.Words,
-			"messages":        rawAnalytics.Messages,
-			"bytes":           rawAnalytics.Size,
-			"id":              chain.ID,
-			"name":            chainDoc.Name,
-			"maxSizeMb":       chainDoc.MaxSizeMb,
+			"complexity_score": rawAnalytics.ComplexityScore,
+			"gifs":             rawAnalytics.Gifs,
+			"images":           rawAnalytics.Images,
+			"videos":           rawAnalytics.Videos,
+			"reply_rate":       rawAnalytics.ReplyRate,
+			"words":            rawAnalytics.Words,
+			"messages":         rawAnalytics.Messages,
+			"bytes":            rawAnalytics.Size,
+			"id":               chain.ID,
+			"name":             chainDoc.Name,
+			"max_size_mb":      chainDoc.MaxSizeMb,
 		}
 		allAnalytics = append(allAnalytics, chainAnalytics)
 	}

@@ -121,5 +121,6 @@ func (s *BotController) GetBotUser(c *gin.Context) {
 		"accent_color":   int32(botUser.AccentColor),
 		"invite_url":     config.InviteUrl,
 		"slash_commands": commands,
+		"guilds":         len(s.ds.State.Guilds),
 	})
 }
