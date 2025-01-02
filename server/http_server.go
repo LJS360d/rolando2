@@ -5,6 +5,7 @@ import (
 	"rolando/cmd/services"
 	"rolando/config"
 	"rolando/server/analytics"
+	"rolando/server/bot"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gin-gonic/gin"
@@ -30,9 +31,15 @@ func (s *HttpServer) Start() {
 	r := gin.Default()
 	s.engine = r
 
-	analyticsController := analytics.NewAnalyticsController(s.ChainsService)
+	analyticsController := analytics.NewController(s.ChainsService, s.DiscordSession)
+	botController := bot.NewController(s.ChainsService, s.DiscordSession)
 	// Routes
 	r.GET("/analytics/:chain", analyticsController.GetChainAnalytics)
+	r.GET("/analytics", analyticsController.GetAllChainsAnalytics)
+
+	r.GET("/bot/user", botController.GetBotUser)
+	r.GET("/bot/guilds", botController.GetBotGuilds)
+	r.POST("/bot/broadcast", botController.Broadcast)
 
 	// Start the server
 	log.Log.Infof("Server listening at %v", config.ServerAddress)
