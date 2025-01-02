@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -84,9 +83,8 @@ func main() {
 	ds.AddHandler(messagesHandler.OnMessageCreate)
 	ds.AddHandler(buttonsHandler.OnButtonInteraction)
 	log.Log.Infof("Logged in as %s", ds.State.User.String())
-	// start the gRPC server
-	grpcServer := server.NewGrpcServer(chainsService, ds)
-	grpcServer.Start()
+	srv := server.NewHttpServer(chainsService, ds)
+	srv.Start()
 
 	// Wait here until SIGINT or other term signal is received.
 	sc := make(chan os.Signal, 1)
@@ -95,5 +93,4 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	ds.Close()
-	grpcServer.Shutdown(context.Background())
 }

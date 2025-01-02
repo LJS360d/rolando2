@@ -10,15 +10,15 @@ import (
 )
 
 var (
-	Token        string
-	Intents      discordgo.Intent
-	OwnerIDs     []string
-	Version      string
-	InviteUrl    string
-	Build        string
-	Env          string
-	DatabasePath string
-	GrpcPort     string
+	Token         string
+	Intents       discordgo.Intent
+	OwnerIDs      []string
+	Version       string
+	InviteUrl     string
+	Build         string
+	Env           string
+	DatabasePath  string
+	ServerAddress string
 )
 
 func init() {
@@ -49,10 +49,10 @@ func init() {
 		log.Println("DATABASE_PATH not set in the environment")
 		DatabasePath = "rolando.db"
 	}
-	GrpcPort = os.Getenv("GRPC_PORT")
-	if GrpcPort == "" {
-		log.Println("GRPC_PORT not set in the environment")
-		GrpcPort = "5051"
+	ServerAddress = os.Getenv("SERVER_ADDRESS")
+	if ServerAddress == "" {
+		log.Println("SERVER_ADDRESS not set in the environment")
+		ServerAddress = "127.0.0.1:8080"
 	}
 
 	Intents = (discordgo.IntentDirectMessageReactions |

@@ -23,8 +23,9 @@ type SlashCommandsHandler struct {
 type SlashCommandHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
 
 type SlashCommand struct {
-	Command *discordgo.ApplicationCommand
-	Handler SlashCommandHandler
+	Command  *discordgo.ApplicationCommand
+	Handler  SlashCommandHandler
+	GuildIds []string // Optional guild IDs to restrict the command to specific guilds
 }
 
 // Constructor function for SlashCommandsHandler
@@ -71,7 +72,7 @@ func NewSlashCommandsHandler(
 		{
 			Command: &discordgo.ApplicationCommand{
 				Name:        "analytics",
-				Description: "Returns analytics about the bot",
+				Description: "Returns analytics about the bot in this server",
 			},
 			Handler: handler.analyticsCommand,
 		},
@@ -167,14 +168,28 @@ func (h *SlashCommandsHandler) registerCommands(commands []SlashCommand) {
 			// Compare if the new command differs in some way (e.g., updated description or options)
 			if !shouldRefreshCommand(*existingCmd, *cmd.Command) {
 				log.Log.Infof("Updating slash command: %s", cmd.Command.Name)
-				h.Client.ApplicationCommandDelete(h.Client.State.User.ID, "", existingCmd.ID)
-				h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+				for _, guildId := range cmd.GuildIds {
+					h.Client.ApplicationCommandDelete(h.Client.State.User.ID, guildId, existingCmd.ID)
+					h.Client.ApplicationCommandCreate(h.Client.State.User.ID, guildId, cmd.Command)
+				}
+				// If no guild IDs, create globally
+				if len(cmd.GuildIds) == 0 {
+					h.Client.ApplicationCommandDelete(h.Client.State.User.ID, "", existingCmd.ID)
+					h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+				}
 			}
 		} else {
 			// Register the new command
 			log.Log.Infof("Registering slash command: %s", cmd.Command.Name)
-			h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+			for _, guildId := range cmd.GuildIds {
+				h.Client.ApplicationCommandCreate(h.Client.State.User.ID, guildId, cmd.Command)
+			}
+			// If no guild IDs, create globally
+			if len(cmd.GuildIds) == 0 {
+				h.Client.ApplicationCommandCreate(h.Client.State.User.ID, "", cmd.Command)
+			}
 		}
+		h.Commands[cmd.Command.Name] = cmd.Handler
 	}
 }
 
@@ -183,8 +198,8 @@ func (h *SlashCommandsHandler) OnSlashCommandInteraction(s *discordgo.Session, i
 	if i.Type != discordgo.InteractionApplicationCommand {
 		return
 	}
-
 	commandName := i.ApplicationCommandData().Name
+	log.Log.Infof("from %s in %s: /%s", i.Member.User.Username, i.GuildID, commandName)
 	if handler, exists := h.Commands[commandName]; exists {
 		handler(s, i) // Call the function bound to this command
 	}
@@ -319,12 +334,12 @@ func (h *SlashCommandsHandler) analyticsCommand(s *discordgo.Session, i *discord
 		log.Log.Errorf("Failed to fetch chain for guild %s: %v", i.GuildID, err)
 		return
 	}
-	analytics := model.NewMarkovChainAnalyzer(chain).GetRawAnalytics()
 	chainDoc, err := h.ChainsService.GetChainDocument(i.GuildID)
 	if err != nil {
 		log.Log.Errorf("Failed to fetch chain document for guild %s: %v", i.GuildID, err)
 		return
 	}
+	analytics := model.NewMarkovChainAnalyzer(chain).GetRawAnalytics()
 	// Constructing the embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Analytics",
