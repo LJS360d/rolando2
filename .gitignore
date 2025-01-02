@@ -40,3 +40,5 @@ bin/
 
 # protoc generated files
 *.pb.go
+
+**/generated

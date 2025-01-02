@@ -4,7 +4,7 @@ tmp_dir = "bin"
 
 [build]
   args_bin = []
-  bin = "bin/dev.exe"
+  bin = "bin/rolando.exe"
   cmd = "make build-dev"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
