@@ -51,7 +51,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-const commandsList = useTemplateRef<HTMLLIElement>("commandsList")
 export default defineComponent({
   name: 'IndexPage',
   data() {
@@ -80,7 +79,6 @@ export default defineComponent({
         { name: 'info', description: 'Shows information about the bot' },
         { name: 'info', description: 'Shows information about the bot' },
       ],
-      commandsList,
     };
   },
   methods: {
