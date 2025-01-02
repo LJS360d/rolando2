@@ -25,7 +25,7 @@ type NumericChainAnalytics struct {
 	ReplyRate       int
 	Words           int
 	Messages        int
-	Size            int
+	Size            uint64
 }
 
 type MarkovChainAnalyzer struct {
@@ -71,6 +71,6 @@ func (mca *MarkovChainAnalyzer) GetRawAnalytics() NumericChainAnalytics {
 		ReplyRate:       mca.chain.ReplyRate,
 		Words:           len(mca.chain.State),
 		Messages:        mca.chain.MessageCounter,
-		Size:            int(utils.MeasureSize(mca.chain.State)),
+		Size:            uint64(utils.MeasureSize(mca.chain.State)),
 	}
 }

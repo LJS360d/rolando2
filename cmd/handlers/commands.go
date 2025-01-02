@@ -85,12 +85,12 @@ func NewSlashCommandsHandler(
 		{
 			Command: &discordgo.ApplicationCommand{
 				Name:        "replyrate",
-				Description: "Sets the reply rate for the bot",
+				Description: "View or set the reply rate for the bot",
 				Options: []*discordgo.ApplicationCommandOption{
 					{
 						Type:        discordgo.ApplicationCommandOptionInteger,
 						Name:        "rate",
-						Description: "the rate to set",
+						Description: "the rate to set (leave empty to view)",
 						Required:    false,
 					},
 				},
@@ -373,7 +373,7 @@ func (h *SlashCommandsHandler) analyticsCommand(s *discordgo.Session, i *discord
 			},
 			{
 				Name:   "Size",
-				Value:  fmt.Sprintf("```%s / %s```", utils.FormatBytes(uint64(analytics.Size)), utils.FormatBytes(uint64(chainDoc.MaxSizeMb*1024*1024))),
+				Value:  fmt.Sprintf("```%s / %s```", utils.FormatBytes(analytics.Size), utils.FormatBytes(uint64(chainDoc.MaxSizeMb*1024*1024))),
 				Inline: true,
 			},
 		},

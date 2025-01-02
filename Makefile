@@ -55,7 +55,7 @@ GRPC_OUT			:=.
 PB_OUT				:=.
 GRPC_OPT 			:=paths=source_relative
 PB_OPT 				:=paths=source_relative
-PROTO 				?= $(shell find . -name "*.proto")
+PROTO 				?= $(shell { git diff --name-only -- '*.proto'; git diff --name-only --cached -- '*.proto'; git ls-files --others --exclude-standard -- '*.proto'; } | sort -u)
 
 gen:
 	protoc --go_out=$(PB_OUT) --go_opt=$(PB_OPT) --go-grpc_out=$(GRPC_OUT) --go-grpc_opt=$(GRPC_OPT) $(PROTO)

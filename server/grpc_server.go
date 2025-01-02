@@ -7,17 +7,22 @@ import (
 	"rolando/cmd/services"
 	"rolando/config"
 	"rolando/server/analytics"
+	"rolando/server/auth"
+	"rolando/server/bot"
 
+	"github.com/bwmarrin/discordgo"
 	"google.golang.org/grpc"
 )
 
 type GrpcServer struct {
-	ChainsService *services.ChainsService
+	ChainsService  *services.ChainsService
+	DiscordSession *discordgo.Session
 }
 
-func NewGrpcServer(chainsService *services.ChainsService) *GrpcServer {
+func NewGrpcServer(chainsService *services.ChainsService, discordSession *discordgo.Session) *GrpcServer {
 	return &GrpcServer{
-		ChainsService: chainsService,
+		ChainsService:  chainsService,
+		DiscordSession: discordSession,
 	}
 }
 
@@ -28,7 +33,10 @@ func (s *GrpcServer) Start() {
 	}
 
 	grpcServer := grpc.NewServer()
+	// Register services
 	analytics.RegisterAnalyticsServer(grpcServer, analytics.NewAnalyticsServer(s.ChainsService))
+	bot.RegisterBotServer(grpcServer, bot.NewBotServer(s.DiscordSession))
+	auth.RegisterAuthServer(grpcServer, auth.NewAuthServerImpl())
 
 	log.Log.Infof("gRPC server listening at %v", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {

@@ -10,15 +10,15 @@ import (
 )
 
 var (
-	Token         string
-	ApplicationID string
-	Intents       discordgo.Intent
-	OwnerIDs      []string
-	Version       string
-	Build         string
-	Env           string
-	DatabasePath  string
-	GrpcPort      string
+	Token        string
+	Intents      discordgo.Intent
+	OwnerIDs     []string
+	Version      string
+	InviteUrl    string
+	Build        string
+	Env          string
+	DatabasePath string
+	GrpcPort     string
 )
 
 func init() {
@@ -34,9 +34,9 @@ func init() {
 	if Token == "" {
 		log.Fatalf("TOKEN not set in the environment")
 	}
-	ApplicationID = os.Getenv("APPLICATION_ID")
-	if ApplicationID == "" {
-		log.Fatalf("APPLICATION_ID not set in the environment")
+	InviteUrl = os.Getenv("INVITE_URL")
+	if InviteUrl == "" {
+		log.Println("INVITE_URL not set in the environment")
 	}
 	ownerIDsStr := os.Getenv("OWNER_IDS")
 	if ownerIDsStr == "" {

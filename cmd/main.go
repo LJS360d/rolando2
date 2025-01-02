@@ -85,7 +85,7 @@ func main() {
 	ds.AddHandler(buttonsHandler.OnButtonInteraction)
 	log.Log.Infof("Logged in as %s", ds.State.User.String())
 	// start the gRPC server
-	grpcServer := server.NewGrpcServer(chainsService)
+	grpcServer := server.NewGrpcServer(chainsService, ds)
 	grpcServer.Start()
 
 	// Wait here until SIGINT or other term signal is received.

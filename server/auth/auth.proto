@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+// import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package auth;
+
+option go_package = "rolando/server/auth";
+
+service Auth {
+  // given a discord Bearer token it validates it and signs an application token
+  rpc SignToken(google.protobuf.StringValue) returns (google.protobuf.StringValue);
+
+}
