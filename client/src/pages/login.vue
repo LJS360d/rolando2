@@ -19,16 +19,16 @@ const accessToken = params.get('access_token');
 const authStore = useAuthStore();
 
 if (accessToken) {
-  fetch('https://discord.com/api/v10/users/@me', {
+  fetch('/api/auth/@me', {
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: accessToken,
     },
   })
     .then(async (res) => {
       if (res.ok) {
         const body = await res.json();
-        authStore.setAuth(accessToken, body);
+        authStore.setAuth(accessToken, { ...body.user, is_owner: body.is_owner });
         router.replace('/'); // Redirect after login
       } else {
         router.replace('/'); // Redirect on error

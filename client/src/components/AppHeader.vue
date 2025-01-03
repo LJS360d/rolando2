@@ -2,16 +2,26 @@
   <v-app-bar app>
     <v-app-bar-nav-icon icon="fas fa-bars" @click="drawer = !drawer" />
 
-    <v-toolbar-title></v-toolbar-title>
+    <v-tooltip text="Join the discord" location="bottom">
+      <template v-slot:activator="{ props }">
+        <a v-bind="props" :href="DISCORD_SERVER_INVITE">
+          <v-app-bar-nav-icon icon="fa-brands fa-discord" />
+        </a>
+      </template>
+    </v-tooltip>
 
     <v-spacer />
 
-    <div class="cursor-pointer pa-1 mr-2 rounded" title="Click to logout" @click="logout" v-if="isLoggedIn">
-      <v-avatar class="mr-3" :size="40">
-        <img :src="userAvatarUrl" alt="User Avatar" />
-      </v-avatar>
-      <span>{{ userDisplayName }}</span>
-    </div>
+    <v-tooltip v-if="isLoggedIn" text="Click to Logout" location="bottom">
+      <template v-slot:activator="{ props }">
+        <div v-bind="props" class="cursor-pointer pa-1 mr-2 rounded" @click="logout">
+          <v-avatar class="mr-3" :size="40">
+            <img :src="userAvatarUrl" alt="User Avatar" />
+          </v-avatar>
+          <span>{{ userDisplayName }}</span>
+        </div>
+      </template>
+    </v-tooltip>
     <v-btn v-else class="ml-3 bg-discord" :href="OAUTH2_URL" target="_self">
       <v-icon class="mr-2" icon="fa-brands fa-discord"></v-icon>
       Login with Discord
@@ -26,13 +36,15 @@
           <span class="text-body-2" :href="item.href">{{ item.name }}</span>
         </span>
       </v-list-item>
-      <v-divider :v-if="isOwner"></v-divider>
-      <v-list-item :v-if="isOwner" :href="item.href" v-for="(item, index) in adminLinks" :key="index">
-        <span>
-          <v-icon :v-if="item.icon" class="mx-2" size="16" :icon="item.icon"></v-icon>
-          <span class="text-body-2" :href="item.href">{{ item.name }}</span>
-        </span>
-      </v-list-item>
+      <template v-if="isOwner">
+        <v-divider></v-divider>
+        <v-list-item :href="item.href" v-for="(item, index) in adminLinks" :key="index">
+          <span>
+            <v-icon :v-if="item.icon" class="mx-2" size="16" :icon="item.icon"></v-icon>
+            <span class="text-body-2" :href="item.href">{{ item.name }}</span>
+          </span>
+        </v-list-item>
+      </template>
     </v-list>
   </v-navigation-drawer>
 </template>
@@ -48,6 +60,7 @@ interface MenuItem {
 }
 
 const OAUTH2_URL: string = import.meta.env.VITE_OAUTH2_URL;
+const DISCORD_SERVER_INVITE: string = import.meta.env.VITE_DISCORD_SERVER_INVITE;
 
 export default defineComponent({
   name: "AppHeader",
@@ -74,17 +87,18 @@ export default defineComponent({
     const userDisplayName = computed(() =>
       authStore.user?.username || authStore.user?.global_name || ""
     );
-    // TODO call server for isOwner
+
     return {
       drawer,
       links,
       adminLinks,
-      OAUTH2_URL,
       logout: authStore.logout,
       isLoggedIn,
-      isOwner: isLoggedIn,
+      isOwner: computed(() => authStore.user?.is_owner || false),
       userAvatarUrl,
       userDisplayName,
+      OAUTH2_URL,
+      DISCORD_SERVER_INVITE,
     };
   },
 });

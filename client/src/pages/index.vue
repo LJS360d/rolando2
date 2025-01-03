@@ -1,6 +1,6 @@
 <template>
   <v-container class="pa-4">
-    <v-row v-if="!isLoading">
+    <v-row v-if="!isLoading && !isError">
       <!-- Hero Section -->
       <v-col cols="12" lg="6">
         <h1 class="text-h3 font-weight-bold mb-4">
@@ -15,7 +15,7 @@
           <br />User discretion is advised.
         </p>
         <h6 class="mt-6">
-          Currently part of {{ "100+" }} servers
+          Currently part of {{ botUser?.guilds ?? 0 }} servers
         </h6>
         <v-btn :href="botUser?.invite_url" class="mt-4 bg-discord" elevation="2">
           <v-icon left class="mr-2" icon="fa-brands fa-discord"></v-icon>
@@ -30,9 +30,13 @@
             <h2 class="text-h5 font-weight-semibold">Commands</h2>
           </v-col>
           <v-col cols="12" sm="6" class="text-right">
-            <v-btn icon @click="shuffleList()" title="Shuffle the commands, why not?">
-              <v-icon icon="fa-solid fa-shuffle"></v-icon>
-            </v-btn>
+            <v-tooltip text="Shuffle the commands, why not?" location="left">
+              <template v-slot:activator="{ props }">
+                <v-btn v-bind="props" icon @click="shuffleList()">
+                  <v-icon icon="fa-solid fa-shuffle"></v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
           </v-col>
         </v-row>
 
@@ -50,67 +54,25 @@
     </v-row>
     <v-progress-circular indeterminate v-else-if="!isError" color="primary" size="64" />
     <v-alert v-else type="error" class="text-body-2">
-      Oops
+      Oops, big error occured, please report it the creator on <a :href="discordServerInvite">the discord</a>
     </v-alert>
   </v-container>
 </template>
 
 <script lang="ts">
-import { useQuery } from '@tanstack/vue-query';
+import { useGetBotUser } from '@/api/bot';
 import { defineComponent } from 'vue';
-
-export interface BotUser {
-  accent_color: number;
-  avatar_url: string;
-  discriminator: string;
-  global_name: string;
-  id: string;
-  invite_url: string;
-  slash_commands: SlashCommand[];
-  username: string;
-  verified: boolean;
-}
-
-export interface SlashCommand {
-  id: string;
-  application_id: string;
-  version: string;
-  type: number;
-  name: string;
-  dm_permission: boolean;
-  nsfw: boolean;
-  description: string;
-  options: Option[] | null;
-}
-
-export interface Option {
-  type: number;
-  name: string;
-  description: string;
-  channel_types: null;
-  required: boolean;
-  options: null;
-  autocomplete: boolean;
-  choices: null;
-}
-
 
 export default defineComponent({
   name: 'IndexPage',
   setup() {
-    const { data: botUser, isLoading, isError } = useQuery({
-      queryKey: ["/bot/user"],
-      queryFn: async () => {
-        const response = await fetch(`/api/bot/user`);
-        if (!response.ok) throw new Error("Failed to fetch bot user");
-        return response.json() as Promise<BotUser>;
-      },
-    });
+    const botUserQuery = useGetBotUser();
 
     return {
-      botUser,
-      isLoading,
-      isError
+      discordServerInvite: import.meta.env.VITE_DISCORD_SERVER_INVITE,
+      botUser: botUserQuery.data,
+      isLoading: botUserQuery.isLoading,
+      isError: botUserQuery.isError,
     };
   },
   methods: {
