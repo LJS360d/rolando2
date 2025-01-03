@@ -50,8 +50,9 @@ func (s *HttpServer) Start() {
 
 	r.GET("/bot/user", botController.GetBotUser)
 	r.GET("/bot/guilds", botController.GetBotGuilds)
-	// r.DELETE("/bot/guilds/:guildId", botController.LeaveGuild)
+	r.GET("/bot/resources", botController.GetBotResources)
 	r.GET("/bot/guilds/:guildId/invite", botController.GetGuildInvite)
+	r.DELETE("/bot/guilds/:guildId", botController.LeaveGuild)
 
 	r.POST("/bot/broadcast", botController.Broadcast)
 

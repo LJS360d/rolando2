@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"rolando/config"
 	"slices"
@@ -13,7 +14,6 @@ import (
 )
 
 func EnsureOwner(c *gin.Context, ds *discordgo.Session) (int, error) {
-	// Check if the user is authenticated
 	authorization := c.Request.Header.Get("Authorization")
 	if authorization == "" {
 		return 401, errors.New("Unauthorized")
@@ -24,6 +24,25 @@ func EnsureOwner(c *gin.Context, ds *discordgo.Session) (int, error) {
 	}
 	if !slices.Contains(config.OwnerIDs, user.ID) {
 		return 403, errors.New("Forbidden")
+	}
+	return 200, nil
+}
+
+func EnsureGuildMember(c *gin.Context, ds *discordgo.Session, guildId string) (int, error) {
+	authorization := c.Request.Header.Get("Authorization")
+	if authorization == "" {
+		return 401, errors.New("Unauthorized")
+	}
+	user, err := FetchUserInfo(authorization)
+	if err != nil {
+		return 500, err
+	}
+	if slices.Contains(config.OwnerIDs, user.ID) {
+		return 200, nil
+	}
+	_, err = ds.GuildMember(guildId, user.ID)
+	if err != nil {
+		return 404, fmt.Errorf("not a guild member or invalid guild id %v", err)
 	}
 	return 200, nil
 }

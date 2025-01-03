@@ -107,27 +107,19 @@ func (s *BotController) GetBotGuilds(c *gin.Context) {
 
 // GET /bot/guilds/:guildId/invite, requires owner authorization
 func (s *BotController) GetGuildInvite(c *gin.Context) {
-	// Ensure the user is the owner
 	errCode, err := auth.EnsureOwner(c, s.ds)
 	if err != nil {
 		c.JSON(errCode, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Fetch the guild
-	guild, err := s.ds.Guild(c.Param("guildId"))
+	channels, err := s.ds.GuildChannels(c.Param("guildId"))
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-
-	if len(guild.Channels) == 0 {
-		c.JSON(400, gin.H{"error": "No channels available in the guild"})
-		return
-	}
-
 	var publicChannelID string
-	for _, channel := range guild.Channels {
+	for _, channel := range channels {
 		if channel != nil && channel.Type == discordgo.ChannelTypeGuildText {
 			publicChannelID = channel.ID
 			break
@@ -139,11 +131,9 @@ func (s *BotController) GetGuildInvite(c *gin.Context) {
 		return
 	}
 
-	// Create the invite
 	inv, err := s.ds.ChannelInviteCreate(publicChannelID, discordgo.Invite{
 		MaxAge:    86400,
 		MaxUses:   1,
-		Guild:     guild,
 		Temporary: false,
 	})
 	if err != nil {
@@ -151,7 +141,6 @@ func (s *BotController) GetGuildInvite(c *gin.Context) {
 		return
 	}
 
-	// Return the invite
 	c.JSON(200, gin.H{"invite": fmt.Sprintf("https://discord.gg/%s", inv.Code)})
 }
 
@@ -166,18 +155,55 @@ func (s *BotController) GetBotUser(c *gin.Context) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	c.JSON(200, gin.H{
-		"id":                     botUser.ID,
-		"username":               botUser.Username,
-		"global_name":            botUser.Username + "#" + botUser.Discriminator,
-		"avatar_url":             botUser.AvatarURL(""),
-		"discriminator":          botUser.Discriminator,
-		"verified":               botUser.Verified,
-		"accent_color":           int32(botUser.AccentColor),
-		"invite_url":             config.InviteUrl,
-		"slash_commands":         commands,
-		"guilds":                 len(s.ds.State.Guilds),
-		"startup_timestamp_unix": config.StartupTime.Unix(),
-		"mem_usage_peak":         m.TotalAlloc,
-		"mem_usage_max":          m.Sys,
+		"id":             botUser.ID,
+		"username":       botUser.Username,
+		"global_name":    botUser.Username + "#" + botUser.Discriminator,
+		"avatar_url":     botUser.AvatarURL(""),
+		"discriminator":  botUser.Discriminator,
+		"verified":       botUser.Verified,
+		"accent_color":   int32(botUser.AccentColor),
+		"invite_url":     config.InviteUrl,
+		"slash_commands": commands,
+		"guilds":         len(s.ds.State.Guilds),
 	})
+}
+
+// GET /bot/resources, public
+func (s *BotController) GetBotResources(c *gin.Context) {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	c.JSON(200, gin.H{
+		"startup_timestamp_unix": config.StartupTime.Unix(),
+		"cpu_cores":              runtime.NumCPU(),
+		"memory": gin.H{
+			"total_alloc":  m.TotalAlloc,
+			"sys":          m.Sys,
+			"heap_alloc":   m.HeapAlloc,
+			"heap_sys":     m.HeapSys,
+			"stack_in_use": m.StackInuse,
+			"gc_count":     m.NumGC,
+		},
+	})
+}
+
+// DELETE /bot/guild/:guildId, requires owner authorization
+func (s *BotController) LeaveGuild(c *gin.Context) {
+	errCode, err := auth.EnsureOwner(c, s.ds)
+	if err != nil {
+		c.JSON(errCode, gin.H{"error": err.Error()})
+		return
+	}
+	guildId := c.Param("guildId")
+	err = s.ds.GuildLeave(guildId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(204, nil)
+	err = s.chainsService.DeleteChain(guildId)
+	if err != nil {
+		log.Log.Errorf("Failed to delete chain after leaving guild: %v", err)
+		return
+	}
 }

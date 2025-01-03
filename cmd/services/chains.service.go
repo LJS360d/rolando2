@@ -104,7 +104,16 @@ func (cs *ChainsService) DeleteChain(id string) error {
 	cs.mu.Lock()
 	delete(cs.chainsMap, id)
 	cs.mu.Unlock()
-	return cs.chainsRepo.DeleteChain(id)
+	err := cs.chainsRepo.DeleteChain(id)
+	if err != nil {
+		return err
+	}
+	err = cs.messagesRepo.DeleteAllGuildMessages(id)
+	if err != nil {
+		return err
+	}
+	log.Log.Infof("Chain %s and associated messages deleted successfully", id)
+	return nil
 }
 
 // LoadChains loads all chains from the repository into memory.

@@ -20,14 +20,15 @@ func NewController(ds *discordgo.Session, messagesRepo *repositories.MessagesRep
 	}
 }
 
-// GET /data/:chain, requires owner authorization
+// GET /data/:chain, requires guild member authorization
 func (s *DataController) GetData(c *gin.Context) {
-	errCode, err := auth.EnsureOwner(c, s.ds)
+	chainId := c.Param("chain")
+	errCode, err := auth.EnsureGuildMember(c, s.ds, chainId)
 	if err != nil {
 		c.JSON(errCode, gin.H{"error": err.Error()})
 		return
 	}
-	messages, err := s.messagesRepo.GetAllGuildMessages(c.Param("chain"))
+	messages, err := s.messagesRepo.GetAllGuildMessages(chainId)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 	}
