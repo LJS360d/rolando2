@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -19,6 +20,7 @@ var (
 	Env           string
 	DatabasePath  string
 	ServerAddress string
+	StartupTime   time.Time
 )
 
 func init() {
@@ -54,6 +56,7 @@ func init() {
 		log.Println("SERVER_ADDRESS not set in the environment")
 		ServerAddress = "127.0.0.1:8080"
 	}
+	StartupTime = time.Now()
 
 	Intents = (discordgo.IntentDirectMessageReactions |
 		discordgo.IntentDirectMessageTyping |

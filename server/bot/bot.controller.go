@@ -112,15 +112,16 @@ func (s *BotController) GetBotUser(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"id":             botUser.ID,
-		"username":       botUser.Username,
-		"global_name":    botUser.Username + "#" + botUser.Discriminator,
-		"avatar_url":     botUser.AvatarURL(""),
-		"discriminator":  botUser.Discriminator,
-		"verified":       botUser.Verified,
-		"accent_color":   int32(botUser.AccentColor),
-		"invite_url":     config.InviteUrl,
-		"slash_commands": commands,
-		"guilds":         len(s.ds.State.Guilds),
+		"id":                     botUser.ID,
+		"username":               botUser.Username,
+		"global_name":            botUser.Username + "#" + botUser.Discriminator,
+		"avatar_url":             botUser.AvatarURL(""),
+		"discriminator":          botUser.Discriminator,
+		"verified":               botUser.Verified,
+		"accent_color":           int32(botUser.AccentColor),
+		"invite_url":             config.InviteUrl,
+		"slash_commands":         commands,
+		"guilds":                 len(s.ds.State.Guilds),
+		"startup_timestamp_unix": config.StartupTime.Unix(),
 	})
 }
