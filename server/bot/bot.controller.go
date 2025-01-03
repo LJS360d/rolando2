@@ -5,6 +5,7 @@ import (
 	"rolando/cmd/services"
 	"rolando/config"
 	"rolando/server/auth"
+	"runtime"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -111,6 +112,8 @@ func (s *BotController) GetBotUser(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
 	c.JSON(200, gin.H{
 		"id":                     botUser.ID,
 		"username":               botUser.Username,
@@ -123,5 +126,7 @@ func (s *BotController) GetBotUser(c *gin.Context) {
 		"slash_commands":         commands,
 		"guilds":                 len(s.ds.State.Guilds),
 		"startup_timestamp_unix": config.StartupTime.Unix(),
+		"mem_usage_peak":         m.TotalAlloc,
+		"mem_usage_max":          m.Sys,
 	})
 }
