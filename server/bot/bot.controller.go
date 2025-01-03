@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"rolando/cmd/log"
 	"rolando/cmd/services"
 	"rolando/config"
@@ -101,7 +102,57 @@ func (s *BotController) GetBotGuilds(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"guilds": guilds})
+	c.JSON(200, guilds)
+}
+
+// GET /bot/guilds/:guildId/invite, requires owner authorization
+func (s *BotController) GetGuildInvite(c *gin.Context) {
+	// Ensure the user is the owner
+	errCode, err := auth.EnsureOwner(c, s.ds)
+	if err != nil {
+		c.JSON(errCode, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Fetch the guild
+	guild, err := s.ds.Guild(c.Param("guildId"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(guild.Channels) == 0 {
+		c.JSON(400, gin.H{"error": "No channels available in the guild"})
+		return
+	}
+
+	var publicChannelID string
+	for _, channel := range guild.Channels {
+		if channel != nil && channel.Type == discordgo.ChannelTypeGuildText {
+			publicChannelID = channel.ID
+			break
+		}
+	}
+
+	if publicChannelID == "" {
+		c.JSON(400, gin.H{"error": "No public channels available in the guild"})
+		return
+	}
+
+	// Create the invite
+	inv, err := s.ds.ChannelInviteCreate(publicChannelID, discordgo.Invite{
+		MaxAge:    86400,
+		MaxUses:   1,
+		Guild:     guild,
+		Temporary: false,
+	})
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the invite
+	c.JSON(200, gin.H{"invite": fmt.Sprintf("https://discord.gg/%s", inv.Code)})
 }
 
 // GET /bot/user, public
