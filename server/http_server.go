@@ -2,11 +2,13 @@ package server
 
 import (
 	"rolando/cmd/log"
+	"rolando/cmd/repositories"
 	"rolando/cmd/services"
 	"rolando/config"
 	"rolando/server/analytics"
 	"rolando/server/auth"
 	"rolando/server/bot"
+	"rolando/server/data"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gin-gonic/gin"
@@ -15,13 +17,15 @@ import (
 type HttpServer struct {
 	ChainsService  *services.ChainsService
 	DiscordSession *discordgo.Session
+	MessagesRepo   *repositories.MessagesRepository
 	engine         *gin.Engine
 }
 
-func NewHttpServer(chainsService *services.ChainsService, discordSession *discordgo.Session) *HttpServer {
+func NewHttpServer(discordSession *discordgo.Session, chainsService *services.ChainsService, messagesRepo *repositories.MessagesRepository) *HttpServer {
 	return &HttpServer{
 		ChainsService:  chainsService,
 		DiscordSession: discordSession,
+		MessagesRepo:   messagesRepo,
 	}
 }
 
@@ -35,11 +39,14 @@ func (s *HttpServer) Start() {
 	analyticsController := analytics.NewController(s.ChainsService, s.DiscordSession)
 	botController := bot.NewController(s.ChainsService, s.DiscordSession)
 	authController := auth.NewController(s.DiscordSession)
+	dataController := data.NewController(s.DiscordSession, s.MessagesRepo)
 	// Routes
 	r.GET("/auth/@me", authController.GetUser)
 
 	r.GET("/analytics/:chain", analyticsController.GetChainAnalytics)
 	r.GET("/analytics", analyticsController.GetAllChainsAnalytics)
+
+	r.GET("/data/:chain", dataController.GetData)
 
 	r.GET("/bot/user", botController.GetBotUser)
 	r.GET("/bot/guilds", botController.GetBotGuilds)

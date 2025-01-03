@@ -83,7 +83,7 @@ func main() {
 	ds.AddHandler(messagesHandler.OnMessageCreate)
 	ds.AddHandler(buttonsHandler.OnButtonInteraction)
 	log.Log.Infof("Logged in as %s", ds.State.User.String())
-	srv := server.NewHttpServer(chainsService, ds)
+	srv := server.NewHttpServer(ds, chainsService, messagesRepo)
 	srv.Start()
 
 	// Wait here until SIGINT or other term signal is received.
