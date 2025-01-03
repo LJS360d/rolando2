@@ -630,38 +630,30 @@ func (h *SlashCommandsHandler) channelsCommand(s *discordgo.Session, i *discordg
 		return ":red_circle:"
 	}
 
-	channelsPermissionMap := make([]map[string]string, 0)
+	responseBuilder := &strings.Builder{}
+	responseBuilder.WriteString(fmt.Sprintf("Channels the bot has access to are marked with: %s\nWhile channels with no access are marked with: %s\nMake a channel accessible by giving %s these permissions:\n%s %s %s\n\n",
+		":green_circle:",
+		":red_circle:",
+		"**ALL**",
+		"`View Channel`", "`Send Messages`", "`Read Message History`",
+	))
+
 	for _, ch := range channels {
 		hasAccess := channelAccessCheck(s, ch.ID)
-		channelsPermissionMap = append(channelsPermissionMap, map[string]string{
-			"name":   ch.Name,
-			"access": accessEmote(hasAccess),
-		})
+		fmt.Fprintf(responseBuilder, "%s <#%s>\n", accessEmote(hasAccess), ch.ID)
 	}
 
-	channelFields := make([]*discordgo.MessageEmbedField, 0)
-	for _, cp := range channelsPermissionMap {
-		channelFields = append(channelFields, &discordgo.MessageEmbedField{
-			Name:   " ",
-			Value:  fmt.Sprintf("%s #%s", cp["access"], cp["name"]),
-			Inline: true,
-		})
+	responseText := responseBuilder.String()
+	if len(responseText) == 0 {
+		responseText = "No available channels to display."
 	}
 
-	// Chunk fields into groups of 15
-	chunkedFields := chunkFields(channelFields, 15)
-
-	embeds := make([]*discordgo.MessageEmbed, 0)
-	for _, fields := range chunkedFields {
-		embeds = append(embeds, &discordgo.MessageEmbed{
-			Title:       "Available Channels",
-			Description: channelsDescription(":green_circle:", ":red_circle:"),
-			Color:       0xFFD700, // Gold color
-			Fields:      append([]*discordgo.MessageEmbedField{{Name: "\t", Value: "\t"}}, fields...),
-		})
-	}
-
-	paginateEmbeds(s, i, embeds)
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: responseText,
+		},
+	})
 }
 
 // implementation of /src command
@@ -708,20 +700,6 @@ func (h *SlashCommandsHandler) checkAdmin(i *discordgo.InteractionCreate, msg ..
 	return false
 }
 
-func channelsDescription(hasAccess string, noAccess string) string {
-	return fmt.Sprintf(
-		`Channels the bot has access to are marked with: %s
-While channels with no access are marked with: %s
-
-Make a channel accessible by giving %s these permissions:
-%s %s %s`,
-		hasAccess,
-		noAccess,
-		"**ALL**",
-		"`View Channel`", "`Send Messages`", "`Read Message History`",
-	)
-}
-
 func channelAccessCheck(s *discordgo.Session, channelID string) bool {
 	channel, err := s.State.Channel(channelID)
 	if err != nil {
@@ -732,39 +710,6 @@ func channelAccessCheck(s *discordgo.Session, channelID string) bool {
 		return false
 	}
 	return permissions&discordgo.PermissionViewChannel != 0
-}
-
-func chunkFields(fields []*discordgo.MessageEmbedField, chunkSize int) [][]*discordgo.MessageEmbedField {
-	var chunks [][]*discordgo.MessageEmbedField
-	for i := 0; i < len(fields); i += chunkSize {
-		end := i + chunkSize
-		if end > len(fields) {
-			end = len(fields)
-		}
-		chunks = append(chunks, fields[i:end])
-	}
-	return chunks
-}
-
-func paginateEmbeds(s *discordgo.Session, i *discordgo.InteractionCreate, embeds []*discordgo.MessageEmbed) {
-	if len(embeds) == 0 {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "No channels available.",
-			},
-		})
-		return
-	}
-
-	for _, embed := range embeds {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{embed},
-			},
-		})
-	}
 }
 
 // compares two commands to check if they are identical in the significant fields
