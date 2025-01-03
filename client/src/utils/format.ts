@@ -51,3 +51,7 @@ export function formatNumber(number: number): string {
 
   return result;
 }
+
+export function guildIconUrl(guildId: string, guildIcon: string, size = 64) {
+  return 'https://cdn.discordapp.com/icons/' + guildId + '/' + guildIcon + `.webp?size=${size}`
+}

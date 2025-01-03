@@ -1,100 +1,135 @@
 <template>
-  <v-container>
+  <v-container class="pa-2" min-width="100%">
     <v-form ref="broadcastForm" @submit.prevent="onFormSubmit" class="d-flex justify-around">
       <v-row>
-        <v-col cols="12">
-          <v-list dense class="grid grid-cols-7 gap-2">
-            <v-list-item v-for="guild in guilds" :key="guild.id" :title="guild.name" :data-name="guild.name"
-              class="bg-grey lighten-3 w-32 rounded-lg p-4 flex align-center">
-              <v-checkbox v-model="selectedGuilds[guild.id]" class="toggle-primary" />
-              <v-avatar size="48" class="ml-2">
-                <img :src="guild.iconURL || 'assets/noimage.svg'" alt="Guild Icon" />
-              </v-avatar>
-              <v-list-item-title class="text-truncate">{{ guild.name }}</v-list-item-title>
-            </v-list-item>
-          </v-list>
+        <v-col cols="6">
+          <div class="d-flex flex-wrap ga-3">
+
+            <v-card v-for="guild in guilds" :id="`guild:${guild.id}`" :key="guild.id" :data-name="guild.name"
+              width="250" :prepend-avatar="guildIconUrl(guild.id, guild.icon)">
+              <template v-slot:title>
+                <span class="font-weight-light">{{ guild.name }}</span>
+              </template>
+              <template v-slot:subtitle>
+                <span class="text-sm"><b>{{ guild.approximate_member_count }}</b> members</span>
+              </template>
+              <!-- TODO: Channels -->
+              <!--
+              <template v-slot:text>
+
+              </template>
+              -->
+              <template v-slot:actions>
+                <div class="px-2">
+                  <v-switch v-model="selectedGuilds[guild.id]" color="primary" inset />
+                </div>
+              </template>
+            </v-card>
+          </div>
+        </v-col>
+
+        <v-col cols="5" class="ma-5">
+          <v-row>
+            <span>Guilds: <b>{{ selectedGuildsCount }}</b> / <b>{{ guilds?.length }}</b></span>
+          </v-row>
+          <v-row align="center" class="ga-5">
+            <v-btn small outlined color="secondary" @click="toggleAllSelection">
+              {{ (selectedGuildsCount === guilds?.length) ? "Deselect" : "Select" }} All
+            </v-btn>
+            <v-text-field v-model="searchText" label="Search" @input="searchGuild" />
+          </v-row>
+          <v-row>
+            <v-textarea v-model="message" label="Message" rows="6"></v-textarea>
+          </v-row>
+          <v-row>
+            <v-switch v-model="keepAfterSubmit" color="primary" label="Keep after submit" inset></v-switch>
+          </v-row>
+          <v-row>
+            <v-btn class="w-100" type="submit" color="primary">Submit</v-btn>
+          </v-row>
         </v-col>
       </v-row>
-
-      <v-col class="d-flex flex-column sticky">
-        <span>Guilds: <b>{{ selectedGuildCount }}</b></span>
-
-        <v-row class="py-4 align-center">
-          <v-btn small outlined color="primary" @click="toggleSelection">
-            Toggle Select
-          </v-btn>
-
-          <v-text-field v-model="searchText" label="Search" outlined dense prepend-icon="mdi-magnify"
-            @input="searchGuild" />
-        </v-row>
-
-        <v-textarea v-model="message" outlined dense label="Message" rows="6" class="mb-4"></v-textarea>
-
-        <v-switch v-model="keepAfterSubmit" label="Keep after submit" inset></v-switch>
-
-        <v-btn type="submit" color="primary">Submit</v-btn>
-      </v-col>
     </v-form>
+    <v-snackbar v-model="snackbar.visible" :color="snackbar.color" :timeout="3000" bottom>
+      {{ snackbar.message }}
+    </v-snackbar>
   </v-container>
 </template>
 
-<script>
+<script lang="ts">
+import { broadcastMessage, useGetBotGuilds } from '@/api/bot';
+import { useAuthStore } from '@/stores/auth';
+import { guildIconUrl } from '@/utils/format';
+
 export default {
   data() {
-    return {
-      guilds: [
-        { id: "1", name: "Guild One", iconURL: null },
-        { id: "2", name: "Guild Two", iconURL: "assets/noimage.svg" },
-      ],
-      selectedGuilds: {},
+    const auth = useAuthStore();
+    const guildsQuery = useGetBotGuilds(auth.token!);
+    const snackbar = ref({
+      visible: false,
       message: "",
-      keepAfterSubmit: false,
+      color: "",
+    });
+    return {
+      guilds: guildsQuery.data,
+      selectedGuilds: ref({} as Record<string, string | boolean>),
+      message: "",
+      keepAfterSubmit: true,
       searchText: "",
+      snackbar,
+      token: auth.token!
     };
   },
   computed: {
-    selectedGuildCount() {
-      return Object.values(this.selectedGuilds).filter((val) => val).length;
+    selectedGuildsCount() {
+      return Object.values(this.selectedGuilds).filter((v) => v).length;
     },
   },
   methods: {
-    onFormSubmit() {
+    guildIconUrl,
+    onFormSubmit: async function () {
       if (!this.message.trim()) {
-        this.showSnackbar("Broadcast message is empty", "error");
+        this.snackbar.message = "Message is empty";
+        this.snackbar.color = "error";
+        this.snackbar.visible = true;
         return;
       }
-
-      const selectedCount = this.selectedGuildCount;
-      if (selectedCount === 0) {
-        this.showSnackbar("No guilds are selected", "error");
-        return;
+      try {
+        const res = await broadcastMessage(this.token, this.message, this.selectedGuilds);
+        if (res.status !== 200) {
+          throw new Error("Failed to broadcast message");
+        }
+        this.snackbar.message = `Message broadcasted to ${this.selectedGuildsCount} guilds`;
+        this.snackbar.color = "success";
+        this.snackbar.visible = true;
+      } catch (error) {
+        this.snackbar.message = (error as any).data.error || "Failed to broadcast message";
+        this.snackbar.color = "error";
+        this.snackbar.visible = true;
+        return
       }
-
-      this.showSnackbar(
-        `Sent "${this.message}" to ${selectedCount} guilds`,
-        "success"
-      );
-
       if (!this.keepAfterSubmit) {
         this.message = "";
+        this.selectedGuilds = {};
       }
     },
-    toggleSelection() {
-      const allSelected = Object.values(this.selectedGuilds).every((val) => val);
-      this.guilds.forEach((guild) => {
-        this.$set(this.selectedGuilds, guild.id, !allSelected);
-      });
+    toggleAllSelection() {
+      if (Object.keys(this.selectedGuilds).length === this.guilds?.length) {
+        this.selectedGuilds = {};
+      } else {
+        this.selectedGuilds = Object.fromEntries(
+          this.guilds?.map((guild) => [guild.id, true]) ?? []
+        );
+      }
     },
     searchGuild() {
       const searchUpper = this.searchText.trim().toUpperCase();
-      this.guilds.forEach((guild) => {
+      this.guilds?.forEach((guild) => {
         const nameUpper = guild.name.toUpperCase();
-        guild.hidden = !nameUpper.includes(searchUpper);
+        const guildElement = document.getElementById(`guild:${guild.id}`)!;
+        guildElement.hidden = !nameUpper.includes(searchUpper);
       });
-    },
-    showSnackbar(message, type) {
-      console.log(`${type}: ${message}`);
-    },
+    }
   },
 };
 </script>

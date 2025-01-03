@@ -1,76 +1,106 @@
 <template>
-  <v-container>
-    <v-row class="py-0">
-      <v-col class="pa-0" cols="12">
-        <!-- Check if data is available -->
-        <v-progress-linear v-if="isDataAvailable" :value="100" height="20" color="grey lighten-2" class="rounded-lg">
-          <!-- Memory blocks -->
-          <div v-for="(block, index) in blocks" :key="index" class="memory-block" :style="{
-            width: (block / max) * BigInt(100) + '%',
-            backgroundColor: getBlockColor(index),
-          }" />
-          <!-- Peak line -->
-          <div class="peak-line" :style="{ left: (peak / max) * BigInt(100) + '%' }"></div>
-        </v-progress-linear>
-
-        <!-- Skeleton loader when data is unavailable -->
-        <v-progress-linear v-else indeterminate height="20" color="grey lighten-3" class="rounded-lg" />
-      </v-col>
-    </v-row>
-  </v-container>
+  <template v-if="isDataAvailable">
+    <div class="position-relative pt-5">
+      <!-- Max label -->
+      <span class="position-absolute top-0 w-max-content text-caption" :style="{ left: '96%' }">
+        {{ formatBytes(max) }}
+      </span>
+      <!-- Current label -->
+      <span class="position-absolute top-0 w-max-content text-caption"
+        :style="{ left: ((current / max) * (100) - 1.5) + '%' }">
+        {{ formatBytes(current) }}
+      </span>
+    </div>
+    <v-progress-linear :value="max" height="20" color="grey lighten-2" class="rounded-lg overflow-visible" :max="max">
+      <div class="mem-breakpoint bg-light-blue" :style="{ left: (current / max) * (100) + '%' }">
+      </div>
+      <!-- Peak line -->
+      <v-tooltip v-slot:activator="{ props }" :text="formatBytes(peak)" location="top center">
+        <div v-bind="props" class="mem-breakpoint bg-red" :style="{ left: (peak / max) * (100) + '%' }">
+        </div>
+      </v-tooltip>
+      <!-- Memory blocks -->
+      <div v-for="(block, index) in blocks" :v-if="!!block" :key="index" class="memory-block" :style="{
+        width: ((block) / max) * (100) + '%',
+        backgroundColor: getBlockColor(index),
+      }">
+      </div>
+    </v-progress-linear>
+    <div class="position-relative pb-5">
+      <!-- Peak label -->
+      <span class="position-absolute w-max-content text-caption" :style="{ left: ((peak / max) * (100) - 1.5) + '%' }">
+        {{ formatBytes(peak) }}
+      </span>
+    </div>
+  </template>
+  <!-- Skeleton loader when data is unavailable -->
+  <v-progress-linear v-else indeterminate height="20" color="grey lighten-3" class="rounded-lg" />
 </template>
 
 <script lang="ts">
+import { formatBytes } from '@/utils/format';
 import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
   name: 'MemoryUsageBar',
   props: {
-    maxBytes: {
-      type: String as PropType<string>, // Accept as string
-      required: false,
+    max: {
+      type: Number,
+      required: true,
     },
-    peakBytes: {
-      type: String as PropType<string>, // Accept as string
-      required: false,
+    current: {
+      type: Number,
+      required: true,
+    },
+    peak: {
+      type: Number,
+      required: true,
     },
     blocks: {
-      type: Array as PropType<bigint[]>,
+      type: Array as PropType<number[]>,
       required: false,
     },
   },
   data() {
     return {
-      max: this.maxBytes ? BigInt(this.maxBytes) : BigInt(0),
-      peak: this.peakBytes ? BigInt(this.peakBytes) : BigInt(0),
+      max: this.max,
+      peak: this.peak,
+      current: this.current
     };
   },
   computed: {
     isDataAvailable(): boolean {
-      return !!this.maxBytes && !!this.peakBytes && !!this.blocks?.length;
+      return !!this.max && !!this.peak && !!this.blocks?.length;
     },
   },
   methods: {
+    formatBytes,
     getBlockColor(index: number): string {
-      const colors = ['#4caf50', '#ffeb3b', '#f44336', '#2196f3', '#9c27b0'];
+      const colors = ['#4caf5069', '#ffeb3b69', '#f4433669', '#2196f369', '#9c27b069'];
       return colors[index % colors.length];
     },
   },
 });
 </script>
 
-<style scoped>
+<style>
 .memory-block {
   height: 100%;
   transition: all 0.3s ease;
 }
 
-.peak-line {
+.v-progress-linear__content {
+  justify-content: flex-start !important;
+}
+
+.mem-breakpoint {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 2px;
-  background-color: red;
-  z-index: 10;
+  width: 3px;
+}
+
+.w-max-content {
+  width: max-content;
 }
 </style>

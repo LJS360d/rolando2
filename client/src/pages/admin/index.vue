@@ -9,21 +9,22 @@
         <span class="text-sm">Currently part of <b>{{ guilds?.length }}</b> guilds</span>
       </template>
       <template v-slot:text>
-        <memory-usage-bar class="pa-3" v-if="chains && botUser" :max-bytes="String(botUser.mem_usage_max)"
-          :peak-bytes="String(botUser.mem_usage_peak)" :blocks="computedBlocks" />
+        <memory-usage-bar v-if="chains && resources"
+          :current="resources?.memory.stack_in_use + resources?.memory.heap_alloc" :max="resources?.memory.total_alloc"
+          :peak="resources?.memory.sys" :blocks="computedBlocks" />
       </template>
     </v-card>
     <v-divider class="my-4"></v-divider>
     <div class="d-flex flex-wrap ga-4">
       <v-card width="250" flat v-for="guild in guilds" :key="guild.id"
-        :prepend-avatar="'https://cdn.discordapp.com/icons/' + guild.id + '/' + guild.icon + '.webp?size=64'">
+        :prepend-avatar="guildIconUrl(guild.id, guild.icon)">
         <template v-slot:title>
-          <span class="font-weight-light">{{ guild.name }}</span>
+          <span class="font-weight-light" :title="guild.name">{{ guild.name }}</span>
         </template>
         <template v-slot:subtitle>
           <span class="text-sm"><b>{{ guild.approximate_member_count }}</b> members</span>
         </template>
-        <template v-slot:text>
+        <template v-slot:text v-if="!!getChain(guild.id)">
           <v-row justify="center" class="pa-3 pb-0">
             <span>{{ formatBytes(getChain(guild.id)?.bytes ?? 0) }} / {{ formatBytes(1024 ** 2 *
               (getChain(guild.id)?.max_size_mb ?? 0)) }}</span>
@@ -37,24 +38,29 @@
             </v-col>
           </v-row>
         </template>
+        <template v-slot:text v-else>
+          <v-row justify="center" class="h-100 align-center">
+            No data available
+          </v-row>
+        </template>
         <template v-slot:actions>
           <v-row justify="space-between">
             <v-col cols="8">
               <v-tooltip v-slot:activator="{ props }" text="Invite to server" location="bottom">
                 <guild-invite-btn :guild-id="guild.id" v-bind="props"></guild-invite-btn>
               </v-tooltip>
-              <v-tooltip v-slot:activator="{ props }" text="Check data" location="bottom">
-                <v-btn v-bind="props" @click="$router.push(`/data/${guild.id}`)" icon="far fa-file-lines"
-                  size="small"></v-btn>
-              </v-tooltip>
               <v-tooltip v-slot:activator="{ props }" text="Copy ID" location="bottom">
                 <v-btn v-bind="props" @click="copyToClipboard(guild.id)" icon="far fa-copy" size="small"></v-btn>
+              </v-tooltip>
+              <v-tooltip v-slot:activator="{ props }" text="Check data" location="bottom">
+                <v-btn v-if="!!getChain(guild.id)" v-bind="props" :href="`/data/${guild.id}`" target="_blank"
+                  icon="far fa-file-lines" size="small"></v-btn>
               </v-tooltip>
             </v-col>
             <v-col cols="3">
               <v-tooltip v-slot:activator="{ props }" text="Leave" location="bottom">
-                <v-btn v-bind="props" class="justify-self-end" color="red" icon="fas fa-right-from-bracket"
-                  size="small"></v-btn>
+                <v-btn v-bind="props" @click="() => openConfirmLeaveGuild(guild.name, guild.id)"
+                  class="justify-self-end" color="red" icon="fas fa-right-from-bracket" size="small"></v-btn>
               </v-tooltip>
             </v-col>
           </v-row>
@@ -62,6 +68,8 @@
 
       </v-card>
     </div>
+    <app-dialog :model-value="dialog.visible" :message="dialog.text" :title="dialog.title" @confirm="dialog.confirm"
+      @cancel="dialog.cancel"></app-dialog>
     <v-snackbar v-model="snackbar.visible" :color="snackbar.color" :timeout="3000" bottom>
       {{ snackbar.message }}
     </v-snackbar>
@@ -70,27 +78,35 @@
 
 <script lang="ts">
 import { useGetAllChainsAnalytics } from '@/api/analytics';
-import { useGetBotGuilds, useGetBotUser } from '@/api/bot';
+import { leaveGuild, useGetBotGuilds, useGetBotResources, useGetBotUser } from '@/api/bot';
 import { useAuthStore } from '@/stores/auth';
-import { formatBytes, formatNumber, formatTime } from '@/utils/format';
+import { formatBytes, formatNumber, formatTime, guildIconUrl } from '@/utils/format';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 export default {
   setup() {
     const auth = useAuthStore();
     const botUserQuery = useGetBotUser();
+    const botResourcesQuery = useGetBotResources();
     const botGuildsQuery = useGetBotGuilds(auth.token!);
     const chainsQuery = useGetAllChainsAnalytics(auth.token!);
     const snackbar = ref({
       visible: false,
-      message: 'This is a notification!',
+      message: "",
       color: "",
     });
+    const dialog = ref({
+      visible: false,
+      title: "",
+      text: "",
+      confirm: undefined as (() => Promise<void> | void) | undefined,
+      cancel: () => {
+        dialog.value.visible = false;
+      },
+    });
     const elapsedSeconds = ref(0);
-    botUserQuery.data?.value?.mem_usage_max;
-    botUserQuery.data?.value?.mem_usage_peak;
     // Watch for changes in the startup time and update elapsedSeconds accordingly
-    watch(() => botUserQuery.data?.value?.startup_timestamp_unix, (newTime) => {
+    watch(() => botResourcesQuery.data?.value?.startup_timestamp_unix, (newTime) => {
       if (newTime) {
         elapsedSeconds.value = Math.floor(Date.now() / 1000) - newTime;
       }
@@ -111,24 +127,24 @@ export default {
       inviteLink: import.meta.env.VITE_DISCORD_SERVER_INVITE,
       guilds: botGuildsQuery.data,
       chains: chainsQuery.data,
+      resources: botResourcesQuery.data,
       uptime,
       snackbar,
-      botUserLoading: botUserQuery.isLoading,
-      botUserError: botUserQuery.isError,
-      guildsLoading: botGuildsQuery.isLoading,
-      guildsError: botGuildsQuery.isError,
-      chainsLoading: chainsQuery.isLoading,
-      chainsError: chainsQuery.isError,
+      dialog,
+      token: auth.token!,
+      botGuildsQuery,
+      windowOpen: window.open
     };
   },
   computed: {
     computedBlocks() {
-      return this.chains?.map(c => BigInt(c.bytes)) || [];
+      return this.chains?.map(c => Number(c.bytes)) || [];
     },
   },
   methods: {
     formatBytes,
     formatNumber,
+    guildIconUrl,
     copyToClipboard(text: string) {
       navigator.clipboard.writeText(text)
         .then(() => {
@@ -141,6 +157,29 @@ export default {
           this.snackbar.message = "Failed to copy to clipboard";
           this.snackbar.color = "error";
         });
+    },
+    openConfirmLeaveGuild(name: string, id: string) {
+      this.dialog.visible = true;
+      this.dialog.title = "Leave Guild";
+      this.dialog.text = `Are you sure you want to leave '${name}'?`;
+      this.dialog.confirm = async () => {
+        try {
+          const res = await leaveGuild(this.token, id)
+          if (res.status !== 204) {
+            throw new Error("Failed to leave guild");
+          }
+          this.snackbar.visible = true;
+          this.snackbar.message = `Guild ${id} left successfully`;
+          this.snackbar.color = "success";
+          this.dialog.visible = false;
+          this.botGuildsQuery.refetch();
+        } catch {
+          this.snackbar.visible = true;
+          this.snackbar.message = `Failed to leave guild ${id}`;
+          this.snackbar.color = "error";
+          this.dialog.visible = false;
+        }
+      };
     },
     getChain(guildId: string) {
       return this.chains?.find(c => c.id === guildId);
@@ -160,3 +199,14 @@ export default {
   },
 };
 </script>
+
+<style scoped lang="scss">
+.v-card {
+  display: flex;
+  flex-direction: column;
+
+  .v-card-actions {
+    justify-self: end;
+  }
+}
+</style>

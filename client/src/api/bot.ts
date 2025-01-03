@@ -11,9 +11,6 @@ export interface BotUser {
   username: string;
   verified: boolean;
   guilds: number;
-  startup_timestamp_unix: number;
-  mem_usage_peak: bigint;
-  mem_usage_max: bigint;
 }
 
 export interface SlashCommand {
@@ -74,4 +71,56 @@ export function useGetBotGuilds(token: string) {
       return response.json() as Promise<BotGuild[]>;
     },
   });
+}
+
+export interface BotResources {
+  cpu_cores: number;
+  memory: BotMemory;
+  startup_timestamp_unix: number;
+}
+
+export interface BotMemory {
+  gc_count: number;
+  heap_alloc: number;
+  heap_sys: number;
+  stack_in_use: number;
+  sys: number;
+  total_alloc: number;
+}
+
+export function useGetBotResources() {
+  return useQuery({
+    queryKey: ["/bot/resources"],
+    queryFn: async () => {
+      const response = await fetch(`/api/bot/resources`);
+      if (!response.ok) throw new Error("Failed to fetch bot resources");
+      return response.json() as Promise<BotResources>;
+    },
+  });
+}
+
+export function leaveGuild(token: string, guildId: string) {
+  return fetch(`/api/bot/guilds/${guildId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: token
+    }
+  })
+}
+
+export function broadcastMessage(token: string, content: string, guilds: Record<string, string | boolean>) {
+  const body = {
+    content,
+    guilds: Object.entries(guilds).map(([id, selected]) => ({
+      id,
+      channel_id: selected ? "" : undefined
+    }))
+  }
+  return fetch(`/api/bot/broadcast`, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      Authorization: token
+    }
+  })
 }

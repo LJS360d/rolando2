@@ -30,18 +30,18 @@
 
   <v-navigation-drawer v-model="drawer" app width="250">
     <v-list>
-      <v-list-item :href="item.href" v-for="(item, index) in links" :key="index">
+      <v-list-item @click="$router.push(item.href)" v-for="(item, index) in links" :key="index">
         <span>
           <v-icon :v-if="item.icon" class="mx-2" size="16" :icon="item.icon"></v-icon>
-          <span class="text-body-2" :href="item.href">{{ item.name }}</span>
+          <span class="text-body-2">{{ item.name }}</span>
         </span>
       </v-list-item>
       <template v-if="isOwner">
         <v-divider></v-divider>
-        <v-list-item :href="item.href" v-for="(item, index) in adminLinks" :key="index">
+        <v-list-item @click="$router.push(item.href)" v-for="(item, index) in adminLinks" :key="index">
           <span>
             <v-icon :v-if="item.icon" class="mx-2" size="16" :icon="item.icon"></v-icon>
-            <span class="text-body-2" :href="item.href">{{ item.name }}</span>
+            <span class="text-body-2">{{ item.name }}</span>
           </span>
         </v-list-item>
       </template>
