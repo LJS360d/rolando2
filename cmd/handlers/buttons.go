@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"rolando/cmd/log"
 	"rolando/cmd/services"
+	"rolando/cmd/utils"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -70,10 +73,11 @@ func (h *ButtonsHandler) onConfirmTrain(s *discordgo.Session, i *discordgo.Inter
 
 	// Start the training process
 	// Send confirmation message
-	s.ChannelMessageSend(i.ChannelID, "Training started! Fetching data...")
+	s.ChannelMessageSend(i.ChannelID, fmt.Sprintf("<@%s> Started Fetching messages.\nI  will send a message when I'm done.\nEstimated Time: `1 Minute per every 5000 Messages in the Server`\nThis might take a while..", i.User.ID))
 
 	go func() {
-		_, err := h.DataFetchService.FetchAllGuildMessages(i.GuildID)
+		startTime := time.Now()
+		messages, err := h.DataFetchService.FetchAllGuildMessages(i.GuildID)
 		if err != nil {
 			log.Log.Errorf("Failed to fetch messages for guild %s: %v", i.GuildID, err)
 			return
@@ -88,7 +92,11 @@ func (h *ButtonsHandler) onConfirmTrain(s *discordgo.Session, i *discordgo.Inter
 		}
 
 		// Send completion message
-		s.ChannelMessageSend(i.ChannelID, "Training completed! Training data fetched.")
+		s.ChannelMessageSend(i.ChannelID, fmt.Sprintf("<@%s> Finished Fetching messages.\nMessages fetched: `%s`\nTime elapsed: `%s`\nMessages/Second: `%s`",
+			i.User.ID,
+			utils.FormatNumber(float64(len(messages))),
+			time.Since(startTime).String(),
+			utils.FormatNumber(float64(len(messages))/(time.Since(startTime).Seconds()))))
 	}()
 }
 
